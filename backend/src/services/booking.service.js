@@ -19,7 +19,7 @@ exports.bookSeat = async(userId, packageName) => {
         const pkg = packageRes.rows[0];
         const ticketPrice = Number(pkg.ticket_price);
 
-        // 2️⃣ CHECK WALLET BALANCE (Crucial Step Added) 💰
+        // 2️⃣ CHECK WALLET BALANCE (Locking Row)
         const walletRes = await client.query(
             "SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE", [userId]
         );
@@ -31,7 +31,7 @@ exports.bookSeat = async(userId, packageName) => {
         const currentBalance = Number(walletRes.rows[0].balance);
 
         if (currentBalance < ticketPrice) {
-            throw new Error(`Insufficient balance. Required: $${ticketPrice}, Available: $${currentBalance}`);
+            throw new Error(`Insufficient balance. Need $${ticketPrice}, Have $${currentBalance}`);
         }
 
         // 3️⃣ DEDUCT MONEY 💸
@@ -39,7 +39,7 @@ exports.bookSeat = async(userId, packageName) => {
             "UPDATE wallets SET balance = balance - $1 WHERE user_id = $2", [ticketPrice, userId]
         );
 
-        // 4️⃣ Find next available seat (LOCKED)
+        // 4️⃣ Find next available seat
         const seatRes = await client.query(
             `SELECT * FROM seats
              WHERE package_id = $1 AND status = 'AVAILABLE'
@@ -63,20 +63,23 @@ exports.bookSeat = async(userId, packageName) => {
              WHERE id = $2`, [userId, seat.id]
         );
 
-        // 6️⃣ REFERRAL LOGIC (DEPTH + WIDTH)
-        // Note: referralService must use the SAME client if possible to be part of transaction, 
-        // but since your referral service uses 'pool', we keep it separate here.
-        // If referral fails, we don't necessarily want to rollback the booking, 
-        // but ideally, they should be connected. For now, this is safe.
+        // 6️⃣ COMMIT TRANSACTION (Booking is now Saved & Paid!) ✅
+        await client.query("COMMIT");
+
+        // ---------------------------------------------------------
+        // 7️⃣ REFERRAL LOGIC (Run AFTER Commit to prevent Deadlock)
+        // ---------------------------------------------------------
         try {
+            console.log("🔄 Processing Referrals...");
+            // Run these in background (await ensures they finish before response, 
+            // but failure won't rollback the booking)
             await referralService.processDepthReferral(userId, ticketPrice);
             await referralService.processWidthReferral(userId);
+            console.log("✅ Referral Bonus Processed");
         } catch (refError) {
-            console.error("Referral Error (Non-blocking):", refError.message);
+            console.error("⚠️ Referral Warning:", refError.message);
+            // We do NOT throw here, so the user still gets their seat.
         }
-
-        // 7️⃣ Commit everything
-        await client.query("COMMIT");
 
         return {
             package: pkg.name,
@@ -86,7 +89,8 @@ exports.bookSeat = async(userId, packageName) => {
         };
 
     } catch (error) {
-        await client.query("ROLLBACK");
+        await client.query("ROLLBACK"); // Only rollback if Booking logic failed
+        console.error("❌ Booking Transaction Failed:", error.message);
         throw error;
 
     } finally {

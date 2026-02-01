@@ -8,5 +8,6 @@ router.post(
     authMiddleware,
     bookingController.bookSeat
 );
+router.get("/all", authMiddleware, bookingController.getAllBookings);
 
 module.exports = router;
