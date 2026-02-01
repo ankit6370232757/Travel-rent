@@ -25,12 +25,11 @@ const BarContainer = styled.div`
 
 const BarFill = styled.div`
   height: 100%;
-  width: ${props => props.width}%;
+  width: ${props => props.$width}%;
   background: ${({ theme }) => theme.accent};
   transition: width 0.4s ease;
 `;
 
-// Example for the blue buttons in your image
 const ActionButton = styled.button`
   width: 100%;
   padding: 12px;
@@ -57,17 +56,29 @@ export default function Packages() {
       try {
         const res = await api.get(`/seats/status/${pkg}`);
         setStatus(prev => ({ ...prev, [pkg]: res.data }));
-      } catch {}
+      } catch (err) {
+        console.error("Failed to load status for", pkg);
+      }
     });
   }, []);
 
   const book = async (pkg) => {
+    console.log(`🖱 Button Clicked for: ${pkg}`); // CHECK CONSOLE FOR THIS
+    
+    // Check if user accidentally double-clicks
+    if(!window.confirm(`Confirm booking for ${pkg}?`)) return;
+
     try {
-      await api.post("/booking/book-seat", { packageName: pkg });
+      console.log("🚀 Sending request...");
+      const res = await api.post("/booking/book-seat", { packageName: pkg });
+      console.log("✅ Success:", res.data);
       alert("Seat successfully booked!");
       window.location.reload(); 
-    } catch {
-      alert("Booking failed. Check balance or seat availability.");
+    } catch (err) {
+      console.error("❌ Booking Failed:", err);
+      // Show the exact error from the backend
+      const errorMsg = err.response?.data?.message || "Connection Error";
+      alert(`Booking Failed: ${errorMsg}`);
     }
   };
 
@@ -85,7 +96,7 @@ export default function Packages() {
               <span>{percent}% Filled</span>
             </div>
             <BarContainer>
-              <BarFill width={percent} />
+              <BarFill $width={percent} />
             </BarContainer>
             <ActionButton onClick={() => book(pkg)}>Book Now</ActionButton>
           </Item>

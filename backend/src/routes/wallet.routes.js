@@ -7,4 +7,7 @@ router.get("/", authMiddleware, walletController.getWallet);
 router.post("/withdraw", authMiddleware, walletController.withdraw);
 router.get("/withdrawals", authMiddleware, walletController.withdrawHistory);
 
+// ✅ NEW ROUTE
+router.post("/deposit", authMiddleware, walletController.requestDeposit);
+
 module.exports = router;

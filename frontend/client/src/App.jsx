@@ -7,6 +7,7 @@ import Register from "./auth/Register";
 import Dashboard from "./dashboard/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
+import AdminPanel from "./dashboard/AdminPanel";
 
 // Define the professional theme
 const theme = {
@@ -49,6 +50,7 @@ export default function App() {
               }
             />
             <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/admin" element={<AdminPanel />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

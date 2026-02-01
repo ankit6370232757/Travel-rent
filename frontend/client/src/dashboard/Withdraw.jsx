@@ -17,32 +17,47 @@ const Input = styled.input`
   background: transparent;
   border: 1px solid ${({ theme }) => theme.soft};
   border-radius: 8px;
-  color: white;
+  color: ${({ theme }) => theme.text};
   outline: none;
-  &:focus { border-color: ${({ theme }) => theme.accent}; }
+  
+  &:focus { 
+    border-color: ${({ theme }) => theme.accent}; 
+  }
 `;
 
 const Button = styled.button`
   padding: 12px;
-  background: ${({ theme }) => theme.accent};
-  color: #000;
+  background: ${({ theme, disabled }) => disabled ? theme.soft : theme.accent};
+  color: ${({ disabled }) => disabled ? "#888" : "#000"};
   border: none;
   border-radius: 8px;
   font-weight: bold;
-  cursor: pointer;
+  cursor: ${({ disabled }) => disabled ? "not-allowed" : "pointer"};
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: ${({ disabled }) => disabled ? 1 : 0.9};
+  }
 `;
 
 export default function Withdraw() {
   const [amount, setAmount] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const submit = async () => {
     if (!amount || amount < 300) return alert("Minimum withdrawal is $300");
+    
+    setIsLoading(true);
     try {
       await api.post("/wallet/withdraw", { amount });
-      alert("Withdrawal request sent for approval.");
+      alert("Withdrawal request sent successfully! Waiting for approval.");
       setAmount("");
-    } catch {
-      alert("Insufficient balance.");
+    } catch (err) {
+      // Show exact error from backend (e.g., "Insufficient balance")
+      const msg = err.response?.data?.message || "Withdrawal failed";
+      alert(msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -50,13 +65,18 @@ export default function Withdraw() {
     <Card>
       <h3 style={{margin: 0}}>Withdraw Funds</h3>
       <p style={{fontSize: '12px', color: '#aaa'}}>Min: $300 | Fee: 3%</p>
+      
       <Input 
         type="number" 
         placeholder="Enter amount" 
         value={amount}
-        onChange={e => setAmount(e.target.value)} 
+        onChange={e => setAmount(e.target.value)}
+        disabled={isLoading}
       />
-      <Button onClick={submit}>Submit Request</Button>
+      
+      <Button onClick={submit} disabled={isLoading}>
+        {isLoading ? "Processing..." : "Submit Request"}
+      </Button>
     </Card>
   );
 }

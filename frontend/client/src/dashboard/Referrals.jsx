@@ -7,6 +7,8 @@ const Card = styled.div`
   padding: 24px;
   border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.soft};
+  max-height: 500px;
+  overflow-y: auto; /* Allow scrolling if list is long */
 `;
 
 const Title = styled.h3`
@@ -25,6 +27,7 @@ const LevelTitle = styled.div`
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 6px;
+  color: ${({ theme }) => theme.text};
 `;
 
 const UserItem = styled.div`
@@ -37,51 +40,35 @@ const UserItem = styled.div`
 const EmptyText = styled.p`
   font-size: 14px;
   color: ${({ theme }) => theme.textSoft};
+  text-align: center;
+  margin-top: 20px;
 `;
 
 export default function Referrals() {
   const [tree, setTree] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .get("/referrals/tree")
+    api.get("/referrals/tree")
       .then((res) => {
-        console.log("REFERRAL TREE RESPONSE 👉", res.data);
-
-        let data = res.data;
-
-        // ✅ CASE 1: backend returns { success, data }
-        if (data?.data) {
-          data = data.data;
-        }
-
-        // ✅ CASE 2: backend returns ARRAY → convert to tree
-        if (Array.isArray(data)) {
-          const formatted = {};
-          data.forEach((item) => {
-            if (!formatted[item.level]) {
-              formatted[item.level] = [];
-            }
-            formatted[item.level].push(item.email);
+        const rawData = res.data; // Expecting Array: [{level: 1, email: "..."}, ...]
+        
+        const grouped = {};
+        
+        // Ensure data is array before mapping
+        if (Array.isArray(rawData)) {
+          rawData.forEach((item) => {
+            const lvlKey = `Level ${item.level}`;
+            if (!grouped[lvlKey]) grouped[lvlKey] = [];
+            grouped[lvlKey].push(item.email);
           });
-          setTree(formatted);
         }
-        // ✅ CASE 3: backend returns OBJECT (ideal)
-        else if (typeof data === "object") {
-          setTree(data);
-        }
-        // ❌ unexpected shape
-        else {
-          setTree({});
-        }
-
+        
+        setTree(grouped);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Referral tree fetch failed ❌", err);
-        setError("Failed to load referral tree");
+        console.error("Referral fetch error:", err);
         setLoading(false);
       });
   }, []);
@@ -90,29 +77,20 @@ export default function Referrals() {
     <Card>
       <Title>Network Tree (D1 – D6)</Title>
 
-      {loading && <EmptyText>Loading referrals…</EmptyText>}
+      {loading && <EmptyText>Loading network...</EmptyText>}
 
-      {!loading && error && <EmptyText>{error}</EmptyText>}
-
-      {!loading && !error && Object.keys(tree).length === 0 && (
+      {!loading && Object.keys(tree).length === 0 && (
         <EmptyText>No referrals found yet.</EmptyText>
       )}
 
-      {!loading &&
-        !error &&
-        Object.entries(tree).map(([level, users]) => (
-          <LevelBlock key={level}>
-            <LevelTitle>{level.toUpperCase()}</LevelTitle>
-
-            {users.length === 0 ? (
-              <UserItem>No users</UserItem>
-            ) : (
-              users.map((email, i) => (
-                <UserItem key={i}>• {email}</UserItem>
-              ))
-            )}
-          </LevelBlock>
-        ))}
+      {!loading && Object.entries(tree).map(([levelName, emails]) => (
+        <LevelBlock key={levelName}>
+          <LevelTitle>{levelName}</LevelTitle>
+          {emails.map((email, idx) => (
+            <UserItem key={idx}>• {email}</UserItem>
+          ))}
+        </LevelBlock>
+      ))}
     </Card>
   );
 }
