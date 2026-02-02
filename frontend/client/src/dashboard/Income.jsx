@@ -1,16 +1,85 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
+import { motion } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from "recharts";
+import { TrendingUp, Activity } from "lucide-react";
 import api from "../api/axios";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-const Card = styled.div`
-  background: ${({ theme }) => theme.card};
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.soft};
+// ✨ Glassmorphism Card
+const Card = styled(motion.div)`
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 30px;
   display: flex;
   flex-direction: column;
-  min-height: 350px;
+  min-height: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+`;
+
+const TitleGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Title = styled.h3`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.text};
+`;
+
+const Subtitle = styled.div`
+  font-size: 13px;
+  color: ${({ theme }) => theme.textSoft};
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+`;
+
+const Badge = styled.div`
+  background: rgba(62, 166, 255, 0.1);
+  color: #3ea6ff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(62, 166, 255, 0.2);
+`;
+
+const ChartContainer = styled.div`
+  width: 100%;
+  height: 300px;
+  min-width: 0;
+  flex: 1;
+`;
+
+const EmptyState = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.textSoft};
+  text-align: center;
+  
+  svg { margin-bottom: 15px; opacity: 0.5; }
+  p { margin: 0; font-size: 15px; }
+  small { font-size: 12px; opacity: 0.6; margin-top: 5px; }
 `;
 
 export default function Income() {
@@ -20,77 +89,112 @@ export default function Income() {
   useEffect(() => {
     api.get("/income/history")
       .then(res => {
-        console.log("📊 Chart Data Response:", res.data); // CHECK THIS LOG IN BROWSER
-
-        if (!Array.isArray(res.data)) {
-          console.error("❌ Data is not an array:", res.data);
-          return;
-        }
+        if (!Array.isArray(res.data)) return;
 
         const grouped = {};
         res.data.forEach(i => {
-          // Robust date parsing
           const dateObj = new Date(i.created_at);
           const day = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD
           grouped[day] = (grouped[day] || 0) + Number(i.amount);
         });
 
-        const formattedData = Object.keys(grouped).map(d => ({ date: d, amount: grouped[d] }));
-        console.log("📈 Processed Chart Data:", formattedData); // CHECK THIS LOG
+        // Convert to array and Sort by date
+        const formattedData = Object.keys(grouped)
+          .map(d => ({ date: d, amount: grouped[d] }))
+          .sort((a, b) => new Date(a.date) - new Date(b.date)); // Ensure time order
 
         setData(formattedData);
         setLoading(false);
       })
       .catch(err => {
-        console.error("❌ Failed to load income history:", err);
+        console.error("❌ Failed to load income:", err);
         setLoading(false);
       });
   }, []);
 
   return (
-    <Card>
-      <h3 style={{marginBottom: '20px'}}>Earnings Growth</h3>
-      
-      {/* Container with fixed height ensures Recharts knows how to render */}
-      <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+    <Card 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Header>
+        <TitleGroup>
+          <div style={{ background: 'rgba(62,166,255,0.2)', padding: '8px', borderRadius: '10px', color: '#3ea6ff' }}>
+            <TrendingUp size={20} />
+          </div>
+          <div>
+            <Title>Earnings Analytics</Title>
+            <Subtitle>Growth Over Time</Subtitle>
+          </div>
+        </TitleGroup>
+        
+        {data.length > 0 && (
+          <Badge>
+            <Activity size={14} /> Live Data
+          </Badge>
+        )}
+      </Header>
+
+      <ChartContainer>
         {loading ? (
-          <p style={{ color: '#888', textAlign: 'center', marginTop: '100px' }}>Loading chart...</p>
+          <EmptyState><p>Loading analytics...</p></EmptyState>
         ) : data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="date" stroke="#888" fontSize={12} tick={{fill: '#aaa'}} />
-              <YAxis stroke="#888" fontSize={12} tick={{fill: '#aaa'}} />
-              <Tooltip 
-                contentStyle={{backgroundColor: '#1e1e1e', borderColor: '#333', color: '#fff'}} 
-                itemStyle={{color: '#fff'}}
-                cursor={{stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2}}
+            <AreaChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+              <defs>
+                <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3ea6ff" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3ea6ff" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis 
+                dataKey="date" 
+                stroke="#666" 
+                fontSize={12} 
+                tickMargin={10} 
+                tickFormatter={(str) => {
+                  const date = new Date(str);
+                  return `${date.getDate()}/${date.getMonth()+1}`;
+                }}
               />
-              <Line 
+              <YAxis 
+                stroke="#666" 
+                fontSize={12} 
+                tickFormatter={(number) => `$${number}`}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: 'rgba(20, 20, 20, 0.9)', 
+                  borderColor: 'rgba(255,255,255,0.1)', 
+                  backdropFilter: 'blur(10px)',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                }} 
+                itemStyle={{ color: '#3ea6ff', fontWeight: 'bold' }}
+                cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
+              />
+              <Area 
                 type="monotone" 
                 dataKey="amount" 
                 stroke="#3ea6ff" 
                 strokeWidth={3} 
-                dot={{r: 4, fill: '#3ea6ff'}} 
-                activeDot={{r: 6, fill: '#fff'}}
-                animationDuration={1500}
+                fillOpacity={1} 
+                fill="url(#colorIncome)" 
+                activeDot={{ r: 6, fill: '#fff', stroke: '#3ea6ff', strokeWidth: 2 }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div style={{ 
-            height: "100%", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            flexDirection: "column",
-            color: "#666" 
-          }}>
-            <p>No income history yet</p>
-            <small>Earnings appear here after daily processing</small>
-          </div>
+          <EmptyState>
+            <Activity size={48} />
+            <p>No income history found yet</p>
+            <small>Your daily earnings will appear here once processed.</small>
+          </EmptyState>
         )}
-      </div>
+      </ChartContainer>
     </Card>
   );
 }

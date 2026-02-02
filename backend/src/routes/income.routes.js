@@ -1,12 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const incomeService = require("../services/income.service");
-const pool = require("../config/db"); // ✅ Added
-const authMiddleware = require("../middleware/auth.middleware"); // ✅ Added
+const pool = require("../config/db");
+const authMiddleware = require("../middleware/auth.middleware");
 
-// ✅ THIS WAS MISSING: The route for the Chart
+// ✅ Updated Route: Disable Caching for Real-Time Data
 router.get("/history", authMiddleware, async(req, res) => {
     try {
+        // Prevent 304 Caching
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
         const userId = req.user.id;
         const result = await pool.query(
             "SELECT amount, created_at FROM income_logs WHERE user_id = $1 ORDER BY created_at ASC", [userId]
@@ -18,7 +21,7 @@ router.get("/history", authMiddleware, async(req, res) => {
     }
 });
 
-// Existing Manual Triggers
+// ... keep existing routes below ...
 router.post("/daily", async(_, res) => {
     await incomeService.runDailyIncome();
     res.json({ message: "Daily income executed" });

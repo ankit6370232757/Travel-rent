@@ -2,32 +2,57 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createGlobalStyle } from "styled-components";
 import { AuthProvider } from "./context/AuthContext";
+
+// Auth Pages
 import Login from "./auth/Login";
 import Register from "./auth/Register";
-import Dashboard from "./dashboard/Dashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
-import AdminPanel from "./dashboard/AdminPanel";
 
-// Define the professional theme
+// New Professional Layout
+import DashboardLayout from "./layouts/DashboardLayout"; 
+
+// Admin & Auth Protection
+import AdminPanel from "./dashboard/AdminPanel";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// ✨ Professional Theme (Deep Dark Mode)
 const theme = {
-  bg: "#0f0f0f",
-  card: "#1e1e1e",
+  bg: "#0a0a0a",        // Deep Black for main background
+  card: "#121212",      // Slightly lighter for cards/sidebar
   text: "#ffffff",
-  textSoft: "#aaaaaa",
-  accent: "#3ea6ff",
-  soft: "#333333",
+  textSoft: "#a0a0a0",
+  accent: "#3ea6ff",    // Professional Blue
+  soft: "#2a2a2a",      // Borders/Separators
   danger: "#ff4d4d",
-  success: "#2ba150",
+  success: "#00c853",
 };
 
+// ✨ Global Styles with Font Smoothing & Custom Scrollbars
 const GlobalStyle = createGlobalStyle`
   body {
     margin: 0;
     padding: 0;
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
     background-color: ${(props) => props.theme.bg};
     color: ${(props) => props.theme.text};
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* Custom Professional Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
   }
 `;
 
@@ -37,20 +62,26 @@ export default function App() {
       <GlobalStyle />
       <AuthProvider>
         <BrowserRouter>
-          <Navbar />
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            
+            {/* ✅ Main Dashboard (Uses the New Layout) */}
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <DashboardLayout />
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+
+            {/* Admin Route */}
             <Route path="/admin" element={<AdminPanel />} />
+
+            {/* Default Redirect */}
+            <Route path="/" element={<Navigate to="/dashboard" />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
