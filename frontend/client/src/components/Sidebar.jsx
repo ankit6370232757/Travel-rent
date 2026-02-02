@@ -9,8 +9,11 @@ import {
   LogOut, 
   Box, 
   X,
-  CreditCard // 👈 THIS WAS MISSING!
+  CreditCard,
+  History,
+  HistoryIcon // 👈 THIS WAS MISSING!
 } from "lucide-react";
+
 
 // ✨ Glassmorphism Container
 const Container = styled(motion.div)`
@@ -161,7 +164,8 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
   const menuItems = [
     { id: "dashboard", icon: <Home size={20} />, label: "Overview" },
     { id: "wallet", icon: <Wallet size={20} />, label: "My Wallet" },
-    { id: "withdraw", icon: <CreditCard size={20} />, label: "Withdraw" }, // ✅ Now CreditCard is defined
+    { id: "withdraw", icon: <CreditCard size={20} />, label: "Withdraw" },
+    { id: "history", icon: <HistoryIcon size={20} />, label: "History" }, // ✅ Now CreditCard is defined
     { id: "packages", icon: <Box size={20} />, label: "Packages" },
     { id: "network", icon: <Users size={20} />, label: "My Network" },
     { id: "earnings", icon: <TrendingUp size={20} />, label: "Analytics" },
