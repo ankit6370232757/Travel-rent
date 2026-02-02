@@ -11,6 +11,7 @@ import Referrals from "../dashboard/Referrals";
 import Income from "../dashboard/Income";
 import Packages from "../dashboard/Packages";
 import History from "../dashboard/History";
+import Settings from "../dashboard/Settings";
 
 // --- STYLED COMPONENTS ---
 
@@ -204,7 +205,8 @@ export default function DashboardLayout() {
       case "dashboard": return <Overview user={user} />;
       case "wallet":    return <Wallet />;
       case "withdraw":  return <Withdraw />;
-      case "history": return <History />; // ✅ Added Withdraw Tab Support
+      case "history": return <History />; 
+      case "settings": return <Settings />;// ✅ Added Withdraw Tab Support
       case "network":   return <Referrals />;
       case "earnings":  return <Income />;
       case "packages":  return <Packages />;
