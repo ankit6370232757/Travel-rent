@@ -11,6 +11,7 @@ const walletRoutes = require("./routes/wallet.routes");
 const referralRoutes = require("./routes/referral.routes");
 const adminRoutes = require("./routes/admin.routes");
 const transactionsRoutes = require("./routes/transactions.routes");
+const supportRoutes = require("./routes/support.routes");
 
 const app = express(); // ✅ app must be created FIRST
 
@@ -32,6 +33,6 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/transactions", transactionsRoutes);
-
+app.use("/api/support", supportRoutes);
 
 module.exports = app;

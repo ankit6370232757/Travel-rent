@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/auth.controller");
-
 const authMiddleware = require("../middleware/auth.middleware");
 const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
@@ -13,38 +12,64 @@ router.post("/login", authController.login);
 router.put("/update-profile", authMiddleware, async(req, res) => {
     try {
         const userId = req.user.id;
-        const { name, email, password } = req.body;
+        // Accept wallet_address now
+        const { name, email, password, wallet_address } = req.body;
 
-        // 1. Validations
         if (!name || !email) {
             return res.status(400).json({ message: "Name and Email are required" });
         }
 
-        // 2. Build Query dynamically based on whether password is provided
         let query, params;
 
         if (password && password.length > 0) {
-            // User wants to change password
+            // Update WITH password
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            query = "UPDATE users SET name = $1, email = $2, password = $3 WHERE id = $4 RETURNING id, name, email";
-            params = [name, email, hashedPassword, userId];
+            query = `
+                UPDATE users 
+                SET name = $1, email = $2, password = $3, wallet_address = $4
+                WHERE id = $5 
+                RETURNING id, name, email, referral_code, wallet_address, role
+            `;
+            params = [name, email, hashedPassword, wallet_address, userId];
         } else {
-            // Only update info, keep old password
-            query = "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email";
-            params = [name, email, userId];
+            // Update WITHOUT password
+            query = `
+                UPDATE users 
+                SET name = $1, email = $2, wallet_address = $3
+                WHERE id = $4 
+                RETURNING id, name, email, referral_code, wallet_address, role
+            `;
+            params = [name, email, wallet_address, userId];
         }
 
-        // 3. Execute
         const result = await pool.query(query, params);
 
-        // 4. Return updated user (excluding password)
         res.json({ message: "Profile updated successfully", user: result.rows[0] });
 
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Server error updating profile" });
+    }
+});
+router.get("/profile", authMiddleware, async(req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Select specific fields including referral_code and wallet_address
+        const result = await pool.query(
+            "SELECT id, name, email, referral_code, wallet_address, role FROM users WHERE id = $1", [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error fetching profile" });
     }
 });
 
