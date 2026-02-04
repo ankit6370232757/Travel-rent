@@ -15,7 +15,12 @@ const supportRoutes = require("./routes/support.routes");
 
 const app = express(); // ✅ app must be created FIRST
 
-app.use(cors());
+app.use(cors({
+    origin: true, // 🚀 Allows your Vercel frontend to connect dynamically
+    credentials: true, // 🔑 REQUIRED because your axios has 'withCredentials: true'
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 // ✅ Health check
