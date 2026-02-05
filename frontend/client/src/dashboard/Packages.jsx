@@ -3,9 +3,10 @@ import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Droplets, Mountain, Wind, Flame, Rocket, 
-  X, Calendar, TrendingUp
+  X, Calendar, TrendingUp, CheckCircle
 } from "lucide-react";
 import api from "../api/axios";
+import toast from "react-hot-toast"; // 👈 Integrated Toast
 
 // --- CONFIGURATION ---
 const PACKAGES = ["WATER", "EARTH", "AIR", "FIRE", "SPACE"];
@@ -22,8 +23,8 @@ const PACKAGE_STYLES = {
 const Container = styled.div`width: 100%;`;
 const Header = styled.div`
   margin-bottom: 25px;
-  h2 { font-size: 24px; margin: 0; color: ${({ theme }) => theme.text}; }
-  p { color: ${({ theme }) => theme.textSoft}; font-size: 14px; margin-top: 5px; }
+  h2 { font-size: 24px; margin: 0; color: #fff; }
+  p { color: #888; font-size: 14px; margin-top: 5px; }
 `;
 const Grid = styled(motion.div)`
   display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
@@ -40,12 +41,10 @@ const IconWrapper = styled.div`
   background: ${props => props.$gradient}; display: flex; align-items: center; justify-content: center;
   color: white; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 `;
-const Title = styled.h3`font-size: 20px; font-weight: 700; margin: 0; color: ${({ theme }) => theme.text};`;
+const Title = styled.h3`font-size: 20px; font-weight: 700; margin: 0; color: #fff;`;
 
-// NEW: Price Tag Style
 const PriceTag = styled.div`
-  font-size: 18px; font-weight: 600; color: ${({ theme }) => theme.accent || "#3ea6ff"}; 
-  margin-top: 5px;
+  font-size: 18px; font-weight: 600; color: #3ea6ff; margin-top: 5px;
 `;
 
 const ProgressBar = styled.div`width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-top: 15px;`;
@@ -63,22 +62,43 @@ const Modal = styled(motion.div)`
   position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
 `;
 const CloseButton = styled.button`position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #fff; cursor: pointer;`;
-const StatGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0;`;
+
+const StatGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px 0 25px 0;`;
+
+// ✨ SELECTABLE INCOME BOX
 const StatBox = styled.div`
-  background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;
+  background: ${props => props.$selected ? "rgba(62, 166, 255, 0.15)" : "rgba(255,255,255,0.05)"}; 
+  border: 2px solid ${props => props.$selected ? "#3ea6ff" : "transparent"};
+  padding: 12px; border-radius: 12px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
+  cursor: pointer; transition: all 0.2s;
+  position: relative;
+
+  &:hover {
+    background: rgba(255,255,255,0.1);
+  }
+
   span { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
   strong { font-size: 14px; color: #fff; }
 `;
+
+const SelectionLabel = styled.div`
+  font-size: 13px; color: #aaa; text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+`;
+
 const ActionButton = styled.button`
   width: 100%; padding: 16px; border-radius: 12px; border: none;
   background: ${props => props.$gradient}; color: #fff; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  cursor: ${props => props.disabled ? "not-allowed" : "pointer"};
+  transition: opacity 0.2s;
 `;
 
 export default function Packages() {
   const [status, setStatus] = useState({});
   const [selectedPkg, setSelectedPkg] = useState(null);
+  const [incomeType, setIncomeType] = useState(null); // 👈 State for selection
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -90,49 +110,65 @@ export default function Packages() {
     });
   }, []);
 
-  // Calculate Potential Bonus for the User
+  // Reset income type when modal opens
+  useEffect(() => {
+    if (selectedPkg) setIncomeType(null);
+  }, [selectedPkg]);
+
   const calculateNextSeatInfo = (pkgData) => {
     if (!pkgData) return { seat: 1, batch: 1, bonus: 0 };
-    
-    // Use dynamic batch size (default 180)
     const BATCH_SIZE = pkgData.batchSize || 180; 
     const totalSold = pkgData.filledSeats || 0;
-    
-    // Calculate NEXT seat info
     const nextBatch = Math.floor(totalSold / BATCH_SIZE) + 1;
     const nextSeatInBatch = (totalSold % BATCH_SIZE) + 1;
     const price = parseFloat(pkgData.ticket_price || 0);
-    
-    // Bonus Formula: (Price * 6%) / SeatNumber
     const bonus = (price * 0.06) / nextSeatInBatch;
-
     return { seat: nextSeatInBatch, batch: nextBatch, bonus: bonus.toFixed(4) };
   };
 
   const book = async () => {
     if(!selectedPkg) return;
-    if(!window.confirm(`Confirm purchase of ${selectedPkg.name} for $${selectedPkg.ticket_price}?`)) return;
+    
+    // 🛡️ VALIDATION: Must select income type
+    if (!incomeType) {
+      toast.error("Please select an Income Plan (Daily, Monthly, or Yearly)");
+      return;
+    }
+
+    if(!window.confirm(`Invest $${selectedPkg.ticket_price} in ${selectedPkg.name} with ${incomeType} payout?`)) return;
+    
     setLoading(true);
+    const loadingToast = toast.loading("Processing investment...");
+
     try {
-      await api.post("/booking/book-seat", { packageName: selectedPkg.name });
-      alert("✅ Investment Successful! Seat booked & Instant Bonus credited.");
-      window.location.reload(); 
+      // 🚀 SENDING INCOME TYPE TO BACKEND
+      await api.post("/booking/book-seat", { 
+        packageName: selectedPkg.name,
+        incomeType: incomeType // 👈 'DAILY', 'MONTHLY', or 'YEARLY'
+      });
+      
+      toast.success("Investment Successful! Bonus Credited.", { id: loadingToast });
+      setLoading(false);
+      setSelectedPkg(null);
+      
+      // Reload to update stats (or refetch)
+      setTimeout(() => window.location.reload(), 1500);
+      
     } catch (err) {
-      alert(`Booking Failed: ${err.response?.data?.message || "Error"}`);
+      const msg = err.response?.data?.message || "Booking Failed";
+      toast.error(msg, { id: loadingToast });
       setLoading(false);
     }
   };
 
   return (
     <Container>
-      <Header><h2>Investment Packages</h2><p>Click a package to see income details and book.</p></Header>
+      <Header><h2>Investment Packages</h2><p>Select a package and choose your income plan.</p></Header>
       
       <Grid initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
         {PACKAGES.map(pkg => {
           const data = status[pkg];
           const style = PACKAGE_STYLES[pkg] || PACKAGE_STYLES.WATER;
-          
-          // Dynamic Batch Progress
           const batchSize = data ? data.batchSize : 180;
           const seatsInBatch = data ? data.seatsInCurrentBatch : 0;
           const percent = Math.min((seatsInBatch / batchSize) * 100, 100);
@@ -143,11 +179,8 @@ export default function Packages() {
                 <IconWrapper $gradient={style.gradient}>{style.icon}</IconWrapper>
                 {data?.currentBatch && <span style={{fontSize:'12px', background:'rgba(255,255,255,0.1)', padding:'4px 8px', borderRadius:'8px', height:'fit-content'}}>Batch {data.currentBatch}</span>}
               </div>
-              
               <Title>{pkg}</Title>
-              {/* PRICE DISPLAY */}
               <PriceTag>${data?.ticket_price || "..."}</PriceTag>
-
               <div style={{ marginTop: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#888', marginBottom: '5px' }}>
                   <span>Filled ({seatsInBatch}/{batchSize})</span>
@@ -160,14 +193,12 @@ export default function Packages() {
         })}
       </Grid>
 
-      {/* --- DETAIL POPUP (MODAL) --- */}
       <AnimatePresence>
         {selectedPkg && (
           <Overlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedPkg(null)}>
             <Modal layoutId={`card-${selectedPkg.name}`} onClick={(e) => e.stopPropagation()}>
               <CloseButton onClick={() => setSelectedPkg(null)}><X size={20}/></CloseButton>
               
-              {/* Header Info */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <IconWrapper $gradient={selectedPkg.style.gradient} style={{ margin: '0 auto 15px auto' }}>{selectedPkg.style.icon}</IconWrapper>
                 <h2 style={{ margin: 0, fontSize: '28px' }}>{selectedPkg.name}</h2>
@@ -175,44 +206,62 @@ export default function Packages() {
                 <p style={{ color: '#888', margin: 0 }}>Entry Fee</p>
               </div>
               
-              {/* LIVE PREVIEW BOX */}
               {(() => {
                  const info = calculateNextSeatInfo(selectedPkg);
                  return (
                    <div style={{ background: 'rgba(62, 166, 255, 0.1)', border: '1px solid rgba(62, 166, 255, 0.3)', padding: '15px', borderRadius: '12px', marginBottom: '20px', textAlign: 'center' }}>
                      <div style={{ color: '#3ea6ff', fontSize: '13px', fontWeight: 'bold', marginBottom: '10px' }}>⚡ IF YOU JOIN NOW:</div>
                      <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-                        <div><span style={{ fontSize: '11px', color: '#aaa' }}>YOUR BATCH</span><br/><strong style={{ fontSize: '16px' }}>#{info.batch}</strong></div>
-                        <div><span style={{ fontSize: '11px', color: '#aaa' }}>YOUR SEAT</span><br/><strong style={{ fontSize: '16px' }}>#{info.seat}</strong></div>
-                        <div><span style={{ fontSize: '11px', color: '#2ecc71' }}>INSTANT BONUS</span><br/><strong style={{ fontSize: '16px', color: '#2ecc71' }}>${info.bonus}</strong></div>
+                       <div><span style={{ fontSize: '11px', color: '#aaa' }}>BATCH</span><br/><strong style={{ fontSize: '16px' }}>#{info.batch}</strong></div>
+                       <div><span style={{ fontSize: '11px', color: '#aaa' }}>SEAT</span><br/><strong style={{ fontSize: '16px' }}>#{info.seat}</strong></div>
+                       <div><span style={{ fontSize: '11px', color: '#2ecc71' }}>BONUS</span><br/><strong style={{ fontSize: '16px', color: '#2ecc71' }}>${info.bonus}</strong></div>
                      </div>
                    </div>
                  );
               })()}
 
-              <div style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px' }}>Potential Income</div>
+              <SelectionLabel>
+                {incomeType ? <CheckCircle size={14} color="#2ecc71" /> : <TrendingUp size={14} />}
+                {incomeType ? "Plan Selected:" : "Choose Your Income Plan"}
+              </SelectionLabel>
               
-              {/* INCOME BREAKDOWN GRID */}
+              {/* ✨ SELECTABLE INCOME GRID */}
               <StatGrid>
-                <StatBox>
-                    <Calendar size={18} color="#3ea6ff"/><br/>
+                <StatBox 
+                  $selected={incomeType === "DAILY"} 
+                  onClick={() => setIncomeType("DAILY")}
+                >
+                    <Calendar size={18} color={incomeType === "DAILY" ? "#fff" : "#3ea6ff"}/>
+                    <br/>
                     <span>Daily</span>
                     <strong>${selectedPkg.daily_income}</strong>
                 </StatBox>
-                <StatBox>
-                    <Calendar size={18} color="#2ecc71"/><br/>
+                <StatBox 
+                  $selected={incomeType === "MONTHLY"} 
+                  onClick={() => setIncomeType("MONTHLY")}
+                >
+                    <Calendar size={18} color={incomeType === "MONTHLY" ? "#fff" : "#2ecc71"}/>
+                    <br/>
                     <span>Monthly</span>
                     <strong>${selectedPkg.monthly_income}</strong>
                 </StatBox>
-                <StatBox>
-                    <TrendingUp size={18} color="#f1c40f"/><br/>
+                <StatBox 
+                  $selected={incomeType === "YEARLY"} 
+                  onClick={() => setIncomeType("YEARLY")}
+                >
+                    <TrendingUp size={18} color={incomeType === "YEARLY" ? "#fff" : "#f1c40f"}/>
+                    <br/>
                     <span>Yearly</span>
                     <strong>${selectedPkg.yearly_income}</strong>
                 </StatBox>
               </StatGrid>
 
-              <ActionButton $gradient={selectedPkg.style.gradient} onClick={book} disabled={loading}>
-                {loading ? "Processing..." : "Invest Now"}
+              <ActionButton 
+                $gradient={selectedPkg.style.gradient} 
+                onClick={book} 
+                disabled={loading || !incomeType} // Disable if no income type selected
+              >
+                {loading ? "Processing..." : (incomeType ? `Invest with ${incomeType} Plan` : "Select a Plan to Invest")}
               </ActionButton>
             </Modal>
           </Overlay>

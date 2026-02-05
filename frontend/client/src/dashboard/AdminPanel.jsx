@@ -12,12 +12,13 @@ import {
   AlertCircle,
   TrendingUp,
   DollarSign,
-  Users
+  Users,
+  Layers // 👈 Added Icon for Plan
 } from "lucide-react";
 import api from "../api/axios";
-import toast from "react-hot-toast"; // 👈 IMPORT TOAST
+import toast from "react-hot-toast"; 
 
-// --- STYLED COMPONENTS ---
+// --- STYLED COMPONENTS (No Changes) ---
 
 const Container = styled(motion.div)`
   max-width: 1200px;
@@ -462,11 +463,13 @@ export default function AdminPanel() {
         ) : (
           <TableContainer>
             <Table>
+              {/* ⚠️ UPDATED TABLE HEADER: Added Plan Column */}
               <thead>
                 <tr>
                   <Th>Date</Th>
                   <Th>User Details</Th>
                   <Th>Package</Th>
+                  <Th>Plan</Th> {/* 👈 Added */}
                   <Th>Seat No</Th>
                   <Th>Price</Th>
                 </tr>
@@ -499,6 +502,13 @@ export default function AdminPanel() {
                     <Td>
                       <Badge bg="rgba(62, 166, 255, 0.1)" color="#3ea6ff" border="rgba(62, 166, 255, 0.2)">
                         {b.package_name}
+                      </Badge>
+                    </Td>
+                    {/* ⚠️ UPDATED: DISPLAY PLAN TYPE (DAILY, MONTHLY, YEARLY) */}
+                    <Td>
+                      <Badge bg="rgba(142, 45, 226, 0.1)" color="#8e2de2" border="rgba(142, 45, 226, 0.2)">
+                         <Layers size={12} style={{marginRight:5}}/>
+                         {b.income_type || "DAILY"}
                       </Badge>
                     </Td>
                     <Td style={{fontFamily: 'monospace', fontSize:'15px', fontWeight: 'bold', color: '#fff'}}>
