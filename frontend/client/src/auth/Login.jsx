@@ -5,11 +5,11 @@ import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
+import toast from "react-hot-toast"; // 👈 Import Toast
 
-// --- STYLED COMPONENTS ---
-
+// --- STYLED COMPONENTS (No Changes) ---
 const Container = styled.div`
-  position: fixed; /* Forces full screen overlay */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
@@ -44,8 +44,8 @@ const GlassCard = styled(motion.div)`
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 50px 40px;
   border-radius: 24px;
-  width: 90%; /* Responsive width */
-  max-width: 420px; /* Limits width on big screens */
+  width: 90%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: 25px;
@@ -54,7 +54,6 @@ const GlassCard = styled(motion.div)`
   z-index: 1;
 `;
 
-// ... (Rest of the components remain the same) ...
 const Header = styled.div` text-align: center; margin-bottom: 10px; `;
 const Logo = styled.h1` font-size: 32px; font-weight: 800; margin: 0 0 10px 0; color: #fff; letter-spacing: -1px; span { color: #3ea6ff; } `;
 const Subtitle = styled.p` color: #888; font-size: 15px; margin: 0; `;
@@ -72,14 +71,33 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
-    if(!email || !password) return alert("Please fill in all fields");
+    // ❌ OLD: alert("Please fill in all fields");
+    // ✅ NEW: Toast Error
+    if(!email || !password) return toast.error("Please fill in all fields");
+    
     setLoading(true);
+    const loadingToast = toast.loading("Signing in..."); // Optional loading state
+
     try {
       const res = await api.post("/auth/login", { email, password });
+      
+      // 1. Save Login Data
       login(res.data);
-      navigate("/dashboard");
-    } catch {
-      alert("Invalid credentials");
+      
+      // ✅ NEW: Toast Success (Dismiss loading and show success)
+      toast.success("Login Successful!", { id: loadingToast });
+
+      // 2. Always go to Dashboard (Logic Unchanged)
+      navigate("/dashboard"); 
+
+    } catch (err) {
+      console.error(err);
+      
+      // ❌ OLD: alert("Invalid email or password");
+      // ✅ NEW: Toast Error with backend message if available
+      const errorMessage = err.response?.data?.message || "Invalid email or password";
+      toast.error(errorMessage, { id: loadingToast });
+      
       setLoading(false);
     }
   };
@@ -97,17 +115,37 @@ export default function Login() {
           <Subtitle>Welcome back! Please login to continue.</Subtitle>
         </Header>
         <InputGroup>
-          <Input placeholder="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input 
+            placeholder="Email Address" 
+            type="email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()} 
+          />
           <IconWrapper><Mail size={18} /></IconWrapper>
         </InputGroup>
         <InputGroup>
-          <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input 
+            type="password" 
+            placeholder="Password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()} 
+          />
           <IconWrapper><Lock size={18} /></IconWrapper>
         </InputGroup>
-        <Button onClick={handleSubmit} whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.02 }} disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+        
+        <Button 
+          onClick={handleSubmit} 
+          whileTap={{ scale: 0.98 }} 
+          whileHover={{ scale: 1.02 }} 
+          disabled={loading} 
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
           {loading ? "Signing In..." : "Login"}
           {!loading && <ArrowRight size={20} />}
         </Button>
+        
         <Footer>Don't have an account? <Link to="/register">Create Account</Link></Footer>
       </GlassCard>
     </Container>

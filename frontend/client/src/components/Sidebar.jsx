@@ -1,6 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
+// ❌ Removed 'useNavigate' (Parent handles this now)
 import { 
   Home, 
   Wallet, 
@@ -12,12 +13,11 @@ import {
   CreditCard,
   History,
   HistoryIcon,
-  Settings,
-  SettingsIcon // 👈 THIS WAS MISSING!
+  SettingsIcon,
+  Shield 
 } from "lucide-react";
 
-
-// ✨ Glassmorphism Container
+// --- STYLED COMPONENTS (No Changes Needed) ---
 const Container = styled(motion.div)`
   width: 280px;
   height: 100vh;
@@ -88,13 +88,20 @@ const MenuItem = styled(motion.div)`
   cursor: pointer;
   font-weight: 600;
   font-size: 15px;
-  color: ${props => props.$active ? "#fff" : "#888"};
+  
+  color: ${props => props.$isSpecial ? "#ff4d4d" : (props.$active ? "#fff" : "#888")};
+  
   background: ${props => props.$active ? "linear-gradient(90deg, rgba(62, 166, 255, 0.15), rgba(62, 166, 255, 0.05))" : "transparent"};
   border: 1px solid ${props => props.$active ? "rgba(62, 166, 255, 0.2)" : "transparent"};
+  
+  ${props => props.$isSpecial && `
+     border: 1px solid rgba(255, 77, 77, 0.2);
+     background: rgba(255, 77, 77, 0.05);
+  `}
+
   position: relative;
   overflow: hidden;
 
-  /* Active Indicator Line */
   &::before {
     content: '';
     position: absolute;
@@ -103,14 +110,14 @@ const MenuItem = styled(motion.div)`
     transform: translateY(-50%);
     height: 20px;
     width: 3px;
-    background: #3ea6ff;
+    background: ${props => props.$isSpecial ? "#ff4d4d" : "#3ea6ff"};
     border-radius: 0 4px 4px 0;
     opacity: ${props => props.$active ? 1 : 0};
     transition: opacity 0.3s;
   }
 
   &:hover {
-    color: #fff;
+    color: ${props => props.$isSpecial ? "#ff1a1a" : "#fff"};
     background: rgba(255, 255, 255, 0.03);
   }
 `;
@@ -163,16 +170,26 @@ const UserMeta = styled.div`
 `;
 
 export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose }) {
+  
   const menuItems = [
     { id: "dashboard", icon: <Home size={20} />, label: "Overview" },
     { id: "wallet", icon: <Wallet size={20} />, label: "My Wallet" },
     { id: "withdraw", icon: <CreditCard size={20} />, label: "Withdraw" },
     { id: "history", icon: <HistoryIcon size={20} />, label: "History" },
-    { id: "settings", icon: <SettingsIcon size={20} />, label: "Settings" }, // ✅ Now CreditCard is defined
     { id: "packages", icon: <Box size={20} />, label: "Packages" },
     { id: "network", icon: <Users size={20} />, label: "My Network" },
     { id: "earnings", icon: <TrendingUp size={20} />, label: "Analytics" },
+    { id: "settings", icon: <SettingsIcon size={20} />, label: "Settings" },
   ];
+
+  if (user && user.role === 'admin') {
+    menuItems.push({ 
+      id: "admin", 
+      icon: <Shield size={20} />, 
+      label: "Admin Panel", 
+      isSpecial: true 
+    });
+  }
 
   return (
     <AnimatePresence>
@@ -193,8 +210,11 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
               <MenuItem
                 key={item.id}
                 $active={activeTab === item.id}
+                $isSpecial={item.isSpecial}
                 onClick={() => {
-                  setActiveTab(item.id);
+                  // ✅ CLEANER: Just tell Parent "Admin Clicked" or "Wallet Clicked"
+                  // The Parent (DashboardLayout) handles the URL logic.
+                  setActiveTab(item.id); 
                   if (window.innerWidth <= 768) onClose();
                 }}
                 initial={{ x: -20, opacity: 0 }}
@@ -216,10 +236,10 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
             </MenuItem>
             
             <UserCard>
-              <UserAvatar>{user.name?.charAt(0) || "U"}</UserAvatar>
+              <UserAvatar>{user?.name?.charAt(0) || "U"}</UserAvatar>
               <UserMeta>
-                <strong>{user.name || "User"}</strong>
-                <span>{user.email}</span>
+                <strong>{user?.name || "User"}</strong>
+                <span>{user?.email}</span>
               </UserMeta>
             </UserCard>
           </UserSection>

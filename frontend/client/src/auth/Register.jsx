@@ -4,11 +4,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { User, Mail, Lock, Tag, UserPlus } from "lucide-react";
 import api from "../api/axios";
+import toast from "react-hot-toast"; // 👈 Import Toast
 
-// --- STYLED COMPONENTS ---
+// --- STYLED COMPONENTS (No Changes) ---
 
 const Container = styled.div`
-  position: fixed; /* Forces full screen */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
@@ -44,7 +45,7 @@ const GlassCard = styled(motion.div)`
   padding: 50px 40px;
   border-radius: 24px;
   width: 90%;
-  max-width: 420px; /* Keeps it centered and neat */
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -69,14 +70,25 @@ export default function Register() {
   const navigate = useNavigate();
 
   const submit = async () => {
-    if(!form.name || !form.email || !form.password) return alert("Please fill in all required fields");
+    // ❌ OLD: alert("Please fill in all required fields");
+    // ✅ NEW: Toast Error
+    if(!form.name || !form.email || !form.password) return toast.error("Please fill in all required fields");
+    
     setLoading(true);
+    const loadingToast = toast.loading("Creating your account..."); // Show Loading Spinner
+
     try {
       await api.post("/auth/register", form);
-      alert("✅ Registered successfully! Please login.");
+      
+      // ✅ NEW: Success Toast (Replaces Loading)
+      toast.success("Registered successfully! Please login.", { id: loadingToast });
+      
       navigate("/login");
     } catch (err) {
-      alert("Registration failed: " + (err.response?.data?.message || "Unknown error"));
+      // ✅ NEW: Error Toast (Replaces Loading)
+      const errorMessage = err.response?.data?.message || "Registration failed";
+      toast.error(errorMessage, { id: loadingToast });
+      
       setLoading(false);
     }
   };
@@ -109,10 +121,12 @@ export default function Register() {
           <Input placeholder="Referral Code (Optional)" value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value })} />
           <IconWrapper><Tag size={18} /></IconWrapper>
         </InputGroup>
+        
         <Button onClick={submit} whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.02 }} disabled={loading}>
           {loading ? "Creating Account..." : "Register Now"}
           {!loading && <UserPlus size={20} />}
         </Button>
+        
         <Footer>Already have an account? <Link to="/login">Login Here</Link></Footer>
       </GlassCard>
     </Container>

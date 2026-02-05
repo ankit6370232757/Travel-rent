@@ -2,16 +2,18 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom"; 
 import Sidebar from "../components/Sidebar";
 
 // Components
 import Wallet from "../dashboard/Wallet";
-import Withdraw from "../dashboard/Withdraw"; // ✅ Import Withdraw
+import Withdraw from "../dashboard/Withdraw";
 import Referrals from "../dashboard/Referrals";
 import Income from "../dashboard/Income";
 import Packages from "../dashboard/Packages";
 import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
+import AdminPanel from "../dashboard/AdminPanel"; // Ensure this path is correct based on your folder structure
 
 // --- STYLED COMPONENTS ---
 
@@ -89,33 +91,20 @@ const WelcomeBanner = styled(motion.div)`
   p { color: #888; margin: 0; font-size: 1.1rem; }
 `;
 
-// --- OVERVIEW SECTION (Updated for 3 Columns) ---
+// --- OVERVIEW SECTION ---
 const OverviewGrid = styled.div`
   display: grid;
-  /* Wallet | Withdraw | Chart */
   grid-template-columns: 1fr 1fr 1.5fr; 
   gap: 25px;
   margin-bottom: 40px;
 
-  /* Tablet: Move Chart to 2nd row */
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr 1fr; 
-  }
-
-  /* Mobile: Stack everything */
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr; 
-  }
+  @media (max-width: 1200px) { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
 `;
 
-// Wrapper to make the chart span full width on medium screens
 const ChartWrapper = styled(motion.div)`
-  @media (max-width: 1200px) {
-    grid-column: span 2; 
-  }
-  @media (max-width: 768px) {
-    grid-column: span 1;
-  }
+  @media (max-width: 1200px) { grid-column: span 2; }
+  @media (max-width: 768px) { grid-column: span 1; }
 `;
 
 const SectionTitle = styled(motion.h3)`
@@ -125,31 +114,17 @@ const SectionTitle = styled(motion.h3)`
   display: flex;
   align-items: center;
   gap: 10px;
-  
   &::before {
-    content: '';
-    width: 4px;
-    height: 24px;
-    background: #3ea6ff;
-    border-radius: 2px;
+    content: ''; width: 4px; height: 24px; background: #3ea6ff; border-radius: 2px;
   }
 `;
 
 // Animation Variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 60 } }
-};
+const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 60 } } };
 
 const Overview = ({ user }) => (
   <motion.div variants={containerVariants} initial="hidden" animate="visible">
-    
-    {/* 1. Welcome Header */}
     <motion.div variants={itemVariants}>
       <WelcomeBanner>
         <h1>Welcome back, {user?.name || "Investor"} 🚀</h1>
@@ -157,28 +132,16 @@ const Overview = ({ user }) => (
       </WelcomeBanner>
     </motion.div>
 
-    {/* 2. Top Stats Row (Wallet + Withdraw + Chart) */}
     <OverviewGrid>
-      <motion.div variants={itemVariants}>
-        <Wallet />
-      </motion.div>
-      
-      {/* ✅ Added Withdraw Module */}
-      <motion.div variants={itemVariants}>
-        <Withdraw />
-      </motion.div>
-
-      <ChartWrapper variants={itemVariants}>
-        <Income /> 
-      </ChartWrapper>
+      <motion.div variants={itemVariants}><Wallet /></motion.div>
+      <motion.div variants={itemVariants}><Withdraw /></motion.div>
+      <ChartWrapper variants={itemVariants}><Income /></ChartWrapper>
     </OverviewGrid>
 
-    {/* 3. Packages Section (Full Width) */}
     <motion.div variants={itemVariants}>
       <SectionTitle>Available Packages</SectionTitle>
       <Packages />
     </motion.div>
-
   </motion.div>
 );
 
@@ -186,11 +149,49 @@ export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [user, setUser] = useState({ name: "User", email: "..." });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  // 1. Load User (✅ FIXED: Handles Nested User Data)
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const storedData = localStorage.getItem("user");
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        // If the data is like { token: "...", user: { role: "admin" } }
+        // We need to grab the inner 'user' object.
+        const realUser = parsedData.user || parsedData;
+        setUser(realUser);
+      } catch (err) {
+        console.error("Error parsing user data", err);
+      }
+    }
   }, []);
+
+  // 2. 🛡️ URL Sync (Admin Mode)
+  useEffect(() => {
+    if (location.pathname === "/admin") {
+      setActiveTab("admin");
+    } else {
+      // If user navigates BACK to dashboard via URL, ensure tab updates
+      if (activeTab === "admin") setActiveTab("dashboard");
+    }
+  }, [location.pathname]);
+
+  // 3. 🛡️ Handle Tab Switching & Routing
+  const handleTabChange = (tabId) => {
+    if (tabId === 'admin') {
+      navigate('/admin'); // Go to Admin URL
+    } else {
+      // If we are currently on the Admin page but clicking a User tab (like Wallet)
+      // We must navigate back to the Dashboard URL to prevent getting stuck
+      if (location.pathname === '/admin') {
+        navigate('/dashboard');
+      }
+      setActiveTab(tabId);
+    }
+  };
 
   const handleLogout = () => {
     if(window.confirm("Log out now?")) {
@@ -205,11 +206,12 @@ export default function DashboardLayout() {
       case "dashboard": return <Overview user={user} />;
       case "wallet":    return <Wallet />;
       case "withdraw":  return <Withdraw />;
-      case "history": return <History />; 
-      case "settings": return <Settings />;// ✅ Added Withdraw Tab Support
+      case "history":   return <History />; 
+      case "settings":  return <Settings />;
       case "network":   return <Referrals />;
       case "earnings":  return <Income />;
       case "packages":  return <Packages />;
+      case "admin":     return <AdminPanel />; 
       default:          return <Overview user={user} />;
     }
   };
@@ -225,7 +227,7 @@ export default function DashboardLayout() {
 
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} // 👈 Using the smart handler
         onLogout={handleLogout}
         user={user}
         isOpen={isSidebarOpen}

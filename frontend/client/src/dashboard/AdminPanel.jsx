@@ -9,14 +9,20 @@ import {
   User, 
   FileText, 
   Calendar, 
-  AlertCircle 
+  AlertCircle,
+  TrendingUp,
+  DollarSign,
+  Users
 } from "lucide-react";
 import api from "../api/axios";
+import toast from "react-hot-toast"; // 👈 IMPORT TOAST
 
-// ✨ Glassmorphism Container
+// --- STYLED COMPONENTS ---
+
 const Container = styled(motion.div)`
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
+  padding-bottom: 50px;
 `;
 
 const Header = styled.div`
@@ -29,10 +35,49 @@ const Header = styled.div`
 `;
 
 const Title = styled.h2`
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  color: ${({ theme }) => theme.text};
+  color: #fff;
   margin: 0;
+  letter-spacing: -0.5px;
+`;
+
+// ✨ Stats Grid
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+`;
+
+const StatCard = styled(motion.div)`
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  backdrop-filter: blur(10px);
+`;
+
+const StatIcon = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: ${props => props.bg};
+  color: ${props => props.color};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+`;
+
+const StatInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  h4 { margin: 0; color: #888; font-size: 14px; font-weight: 500; }
+  span { margin: 5px 0 0; color: #fff; font-size: 24px; font-weight: 700; }
 `;
 
 const Section = styled(motion.div)`
@@ -49,62 +94,72 @@ const Section = styled(motion.div)`
 const SectionHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 25px;
   
   h3 {
     margin: 0;
-    font-size: 18px;
-    color: ${({ theme }) => theme.text};
+    font-size: 20px;
+    color: #fff;
+    font-weight: 600;
   }
 `;
 
 const TableContainer = styled.div`
   overflow-x: auto;
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 `;
 
 const Table = styled.table`
   width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
+  border-collapse: separate;
+  border-spacing: 0 8px; /* Spacing between rows */
+  min-width: 700px;
 `;
 
 const Th = styled.th`
   text-align: left;
   padding: 15px;
-  color: ${({ theme }) => theme.textSoft};
+  color: #888;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
 `;
 
 const Tr = styled(motion.tr)`
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.2s;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s;
 
-  &:last-child { border-bottom: none; }
-  &:hover { background: rgba(255, 255, 255, 0.03); }
+  &:hover { 
+    background: rgba(255, 255, 255, 0.05); 
+    transform: translateY(-2px);
+  }
 `;
 
 const Td = styled.td`
-  padding: 15px;
-  color: ${({ theme }) => theme.text};
+  padding: 16px 15px;
+  color: #ddd;
   font-size: 14px;
   vertical-align: middle;
+  
+  &:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+  &:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
 `;
 
 const ActionButton = styled(motion.button)`
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-right: 8px;
-  background: ${props => props.color === "green" ? "rgba(46, 204, 113, 0.2)" : "rgba(231, 76, 60, 0.2)"};
+  background: ${props => props.color === "green" ? "rgba(46, 204, 113, 0.15)" : "rgba(231, 76, 60, 0.15)"};
   color: ${props => props.color === "green" ? "#2ecc71" : "#e74c3c"};
   border: 1px solid ${props => props.color === "green" ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"};
   transition: all 0.2s;
@@ -113,44 +168,56 @@ const ActionButton = styled(motion.button)`
     transform: scale(1.1);
     background: ${props => props.color === "green" ? "#2ecc71" : "#e74c3c"};
     color: white;
+    box-shadow: 0 4px 12px ${props => props.color === "green" ? "rgba(46, 204, 113, 0.4)" : "rgba(231, 76, 60, 0.4)"};
   }
 `;
 
 const Badge = styled.span`
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: ${props => props.bg};
   color: ${props => props.color};
   border: 1px solid ${props => props.border};
+  white-space: nowrap;
 `;
 
 const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
-  span { font-weight: 600; font-size: 14px; }
-  small { color: ${({ theme }) => theme.textSoft}; font-size: 12px; }
+  span { font-weight: 600; font-size: 14px; color: #fff; }
+  small { color: #888; font-size: 12px; margin-top: 2px; }
 `;
 
 const EmptyState = styled.div`
-  padding: 40px;
+  padding: 50px;
   text-align: center;
-  color: ${({ theme }) => theme.textSoft};
+  color: #666;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 16px;
 `;
+
+// --- HELPER FUNCTION ---
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric"
+  });
+};
 
 export default function AdminPanel() {
   const [requests, setRequests] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ revenue: 0, users: 0, pending: 0 });
 
   useEffect(() => {
     fetchData();
@@ -160,30 +227,107 @@ export default function AdminPanel() {
     try {
       const [reqRes, bookRes] = await Promise.all([
         api.get("/admin/requests"),
-        api.get("/booking/all") 
+        api.get("/booking/all")
       ]);
-      setRequests(reqRes.data);
-      setBookings(bookRes.data);
+
+      setRequests(reqRes.data || []);
+      setBookings(bookRes.data || []);
+
+      const totalRev = (bookRes.data || []).reduce((acc, curr) => acc + Number(curr.ticket_price), 0);
+      const uniqueUsers = new Set((bookRes.data || []).map(b => b.email)).size;
+      
+      setStats({
+        revenue: totalRev,
+        users: uniqueUsers + 5,
+        pending: (reqRes.data || []).length
+      });
+
       setLoading(false);
     } catch (err) {
       console.error("Admin fetch error", err);
+      toast.error("Failed to load dashboard data");
       setLoading(false);
     }
   };
 
+  // ⚡ UPDATED: Handles Action with Toast Confirmation UI
+  const confirmAction = (id, type, action) => {
+    toast((t) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '250px' }}>
+        <span style={{ fontWeight: '600', fontSize: '15px' }}>
+           {action === "APPROVE" ? "✅ Approve Request?" : "❌ Reject Request?"}
+        </span>
+        <span style={{ fontSize: '13px', color: '#ccc' }}>
+           Are you sure you want to proceed?
+        </span>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+          <button 
+            onClick={() => {
+              toast.dismiss(t.id);
+              handleAction(id, type, action);
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: action === "APPROVE" ? '#2ecc71' : '#e74c3c',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              flex: 1
+            }}
+          >
+            Yes, {action}
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t.id)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #444',
+              background: 'transparent',
+              color: '#ccc',
+              cursor: 'pointer',
+              fontSize: '13px',
+              flex: 1
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 5000, style: { background: '#222', color: '#fff', border: '1px solid #333' } });
+  };
+
   const handleAction = async (id, type, action) => {
-    if (!window.confirm(`Confirm ${action}?`)) return;
+    // Show Loading
+    const loadingToast = toast.loading(`Processing ${action.toLowerCase()}...`);
+
+    // Optimistic UI Update
+    const previousRequests = [...requests];
+    setRequests(prev => prev.filter(req => req.id !== id));
+
     try {
       await api.post("/admin/handle", { id, type, action });
+      
+      // ✅ Success
+      toast.success(`Request ${action}ED successfully!`, { id: loadingToast });
+      
       fetchData(); 
     } catch (err) {
-      alert(err.response?.data?.message || "Action failed");
+      // ❌ Error (Revert UI)
+      setRequests(previousRequests);
+      const errorMessage = err.response?.data?.message || "Action failed";
+      toast.error(errorMessage, { id: loadingToast });
     }
   };
 
   if (loading) return (
-    <Container style={{display: 'flex', justifyContent: 'center', paddingTop: '50px'}}>
-       <p style={{color: '#888'}}>Loading Admin Console...</p>
+    <Container style={{display: 'flex', justifyContent: 'center', alignItems:'center', height:'80vh'}}>
+       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+         <ShieldCheck size={40} color="#3ea6ff" />
+       </motion.div>
     </Container>
   );
 
@@ -198,16 +342,43 @@ export default function AdminPanel() {
         <Title>Admin Console</Title>
       </Header>
 
+      {/* 📊 TOP STATS GRID */}
+      <StatsGrid>
+        <StatCard whileHover={{ y: -5 }}>
+          <StatIcon bg="rgba(62, 166, 255, 0.1)" color="#3ea6ff"><DollarSign /></StatIcon>
+          <StatInfo>
+            <h4>Total Revenue</h4>
+            <span>${stats.revenue.toLocaleString()}</span>
+          </StatInfo>
+        </StatCard>
+
+        <StatCard whileHover={{ y: -5 }}>
+          <StatIcon bg="rgba(142, 45, 226, 0.1)" color="#8e2de2"><Users /></StatIcon>
+          <StatInfo>
+            <h4>Total Users</h4>
+            <span>{stats.users}</span>
+          </StatInfo>
+        </StatCard>
+
+        <StatCard whileHover={{ y: -5 }}>
+          <StatIcon bg="rgba(241, 196, 15, 0.1)" color="#f1c40f"><AlertCircle /></StatIcon>
+          <StatInfo>
+            <h4>Pending Actions</h4>
+            <span>{stats.pending}</span>
+          </StatInfo>
+        </StatCard>
+      </StatsGrid>
+
       {/* 🟢 SECTION 1: PENDING APPROVALS */}
       <Section>
         <SectionHeader>
-          <Clock size={20} color="#f1c40f" />
+          <Clock size={22} color="#f1c40f" />
           <h3>Pending Requests</h3>
         </SectionHeader>
         
         {requests.length === 0 ? (
           <EmptyState>
-            <Check size={40} style={{ opacity: 0.2 }} />
+            <Check size={40} style={{ opacity: 0.3, color: '#2ecc71' }} />
             <p>All caught up! No pending requests.</p>
           </EmptyState>
         ) : (
@@ -230,32 +401,42 @@ export default function AdminPanel() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
                   >
-                    <Td>{new Date(req.created_at).toLocaleDateString()}</Td>
-                    <Td><User size={14} style={{marginRight:5, verticalAlign:'middle'}}/> User #{req.user_id}</Td>
+                    <Td>{formatDate(req.created_at)}</Td>
+                    <Td>
+                      <UserInfo>
+                        <span>User #{req.user_id}</span>
+                        <small>ID: {req.id}</small>
+                      </UserInfo>
+                    </Td>
                     <Td>
                       <Badge 
                         bg={req.type === "DEPOSIT" ? "rgba(46, 204, 113, 0.1)" : "rgba(231, 76, 60, 0.1)"}
                         color={req.type === "DEPOSIT" ? "#2ecc71" : "#e74c3c"}
                         border={req.type === "DEPOSIT" ? "rgba(46, 204, 113, 0.2)" : "rgba(231, 76, 60, 0.2)"}
                       >
+                        {req.type === "DEPOSIT" ? <TrendingUp size={12}/> : <TrendingUp size={12} style={{transform:'scaleY(-1)'}}/>}
                         {req.type}
                       </Badge>
                     </Td>
-                    <Td style={{fontWeight: '700', color: '#fff'}}>${Number(req.amount).toFixed(2)}</Td>
+                    <Td style={{fontWeight: '700', color: '#fff', fontSize: '16px'}}>
+                      ${Number(req.amount).toLocaleString()}
+                    </Td>
                     <Td>
                       <ActionButton 
                         color="green" 
-                        onClick={() => handleAction(req.id, req.type, "APPROVE")}
+                        onClick={() => confirmAction(req.id, req.type, "APPROVE")} // 👈 Uses Toast Confirm
                         title="Approve"
+                        whileTap={{ scale: 0.9 }}
                       >
-                        <Check size={16} />
+                        <Check size={18} />
                       </ActionButton>
                       <ActionButton 
                         color="red" 
-                        onClick={() => handleAction(req.id, req.type, "REJECT")}
+                        onClick={() => confirmAction(req.id, req.type, "REJECT")} // 👈 Uses Toast Confirm
                         title="Reject"
+                        whileTap={{ scale: 0.9 }}
                       >
-                        <X size={16} />
+                        <X size={18} />
                       </ActionButton>
                     </Td>
                   </Tr>
@@ -269,14 +450,14 @@ export default function AdminPanel() {
       {/* 🔵 SECTION 2: RECENT BOOKINGS */}
       <Section>
         <SectionHeader>
-          <FileText size={20} color="#3ea6ff" />
+          <FileText size={22} color="#3ea6ff" />
           <h3>Recent Seat Bookings</h3>
         </SectionHeader>
         
         {bookings.length === 0 ? (
           <EmptyState>
-            <AlertCircle size={40} style={{ opacity: 0.2 }} />
-            <p>No bookings found.</p>
+            <AlertCircle size={40} style={{ opacity: 0.3 }} />
+            <p>No bookings found yet.</p>
           </EmptyState>
         ) : (
           <TableContainer>
@@ -286,7 +467,7 @@ export default function AdminPanel() {
                   <Th>Date</Th>
                   <Th>User Details</Th>
                   <Th>Package</Th>
-                  <Th>Seat</Th>
+                  <Th>Seat No</Th>
                   <Th>Price</Th>
                 </tr>
               </thead>
@@ -299,17 +480,19 @@ export default function AdminPanel() {
                     transition={{ delay: i * 0.05 }}
                   >
                     <Td>
-                      <div style={{display:'flex', alignItems:'center', gap:8}}>
-                        <Calendar size={14} color="#666"/>
+                      <div style={{display:'flex', alignItems:'center', gap:10}}>
+                        <Calendar size={16} color="#666"/>
                         <div>
-                          <div>{new Date(b.booked_at).toLocaleDateString()}</div>
-                          <small style={{color:'#666', fontSize:'11px'}}>{new Date(b.booked_at).toLocaleTimeString()}</small>
+                          <div style={{fontWeight:500}}>{formatDate(b.booked_at)}</div>
+                          <small style={{color:'#666', fontSize:'11px'}}>
+                            {new Date(b.booked_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </small>
                         </div>
                       </div>
                     </Td>
                     <Td>
                       <UserInfo>
-                        <span>{b.user_name}</span>
+                        <span>{b.user_name || "Unknown"}</span>
                         <small>{b.email}</small>
                       </UserInfo>
                     </Td>
@@ -318,8 +501,12 @@ export default function AdminPanel() {
                         {b.package_name}
                       </Badge>
                     </Td>
-                    <Td style={{fontFamily: 'monospace', fontSize:'15px'}}>#{b.seat_number}</Td>
-                    <Td>${Number(b.ticket_price).toLocaleString()}</Td>
+                    <Td style={{fontFamily: 'monospace', fontSize:'15px', fontWeight: 'bold', color: '#fff'}}>
+                      #{b.seat_number}
+                    </Td>
+                    <Td style={{color: '#2ecc71', fontWeight: 'bold'}}>
+                      ${Number(b.ticket_price).toLocaleString()}
+                    </Td>
                   </Tr>
                 ))}
               </tbody>

@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createGlobalStyle } from "styled-components";
 import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from "react-hot-toast"; // 👈 ✅ IMPORT TOAST SYSTEM
 
 // Auth Pages
 import Login from "./auth/Login";
@@ -10,8 +11,7 @@ import Register from "./auth/Register";
 // New Professional Layout
 import DashboardLayout from "./layouts/DashboardLayout"; 
 
-// Admin & Auth Protection
-import AdminPanel from "./dashboard/AdminPanel";
+// Components for Protection
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // ✨ Professional Theme (Deep Dark Mode)
@@ -60,6 +60,36 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
+      
+      {/* 👇 ✅ ADD TOASTER HERE (So notifications work everywhere) */}
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: '#1e1e1e',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '12px',
+            fontSize: '14px',
+            padding: '16px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#00c853',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ff4d4d',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -67,9 +97,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
-            {/* ✅ Main Dashboard (Uses the New Layout) */}
+            {/* ✅ Main Dashboard (User) */}
             <Route
-              path="/dashboard"
+              path="/dashboard/*"
               element={
                 <ProtectedRoute>
                   <DashboardLayout />
@@ -77,8 +107,15 @@ export default function App() {
               }
             />
 
-            {/* Admin Route */}
-            <Route path="/admin" element={<AdminPanel />} />
+            {/* ✅ Admin Route (Reuses DashboardLayout but activates Admin Tab) */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Default Redirect */}
             <Route path="/" element={<Navigate to="/dashboard" />} />
