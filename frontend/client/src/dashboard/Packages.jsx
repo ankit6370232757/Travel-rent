@@ -2,14 +2,15 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Droplets, Mountain, Wind, Flame, Rocket, 
+  Droplets, Mountain, Wind, Flame, Rocket, Zap, // 👈 Added Zap Icon for X1
   X, Calendar, TrendingUp, CheckCircle
 } from "lucide-react";
 import api from "../api/axios";
-import toast from "react-hot-toast"; // 👈 Integrated Toast
+import toast from "react-hot-toast"; 
 
 // --- CONFIGURATION ---
-const PACKAGES = ["WATER", "EARTH", "AIR", "FIRE", "SPACE"];
+// ✅ Added "X1" to the list
+const PACKAGES = ["WATER", "EARTH", "AIR", "FIRE", "SPACE", "X1"];
 
 const PACKAGE_STYLES = {
   WATER: { color: "#00d2ff", gradient: "linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)", icon: <Droplets size={24} /> },
@@ -17,6 +18,9 @@ const PACKAGE_STYLES = {
   AIR:   { color: "#d4fc79", gradient: "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)", icon: <Wind size={24} /> },
   FIRE:  { color: "#ff512f", gradient: "linear-gradient(135deg, #ff512f 0%, #dd2476 100%)", icon: <Flame size={24} /> },
   SPACE: { color: "#8E2DE2", gradient: "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)", icon: <Rocket size={24} /> },
+  
+  // ✅ NEW STYLE FOR X1 (Gold/Premium Theme)
+  X1:    { color: "#FFD700", gradient: "linear-gradient(135deg, #FFD700 0%, #FDB931 100%)", icon: <Zap size={24} /> },
 };
 
 // --- STYLED COMPONENTS ---
@@ -98,7 +102,7 @@ const ActionButton = styled.button`
 export default function Packages() {
   const [status, setStatus] = useState({});
   const [selectedPkg, setSelectedPkg] = useState(null);
-  const [incomeType, setIncomeType] = useState(null); // 👈 State for selection
+  const [incomeType, setIncomeType] = useState(null); 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -110,7 +114,6 @@ export default function Packages() {
     });
   }, []);
 
-  // Reset income type when modal opens
   useEffect(() => {
     if (selectedPkg) setIncomeType(null);
   }, [selectedPkg]);
@@ -129,7 +132,6 @@ export default function Packages() {
   const book = async () => {
     if(!selectedPkg) return;
     
-    // 🛡️ VALIDATION: Must select income type
     if (!incomeType) {
       toast.error("Please select an Income Plan (Daily, Monthly, or Yearly)");
       return;
@@ -141,17 +143,15 @@ export default function Packages() {
     const loadingToast = toast.loading("Processing investment...");
 
     try {
-      // 🚀 SENDING INCOME TYPE TO BACKEND
       await api.post("/booking/book-seat", { 
         packageName: selectedPkg.name,
-        incomeType: incomeType // 👈 'DAILY', 'MONTHLY', or 'YEARLY'
+        incomeType: incomeType 
       });
       
       toast.success("Investment Successful! Bonus Credited.", { id: loadingToast });
       setLoading(false);
       setSelectedPkg(null);
       
-      // Reload to update stats (or refetch)
       setTimeout(() => window.location.reload(), 1500);
       
     } catch (err) {
@@ -168,7 +168,9 @@ export default function Packages() {
       <Grid initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
         {PACKAGES.map(pkg => {
           const data = status[pkg];
-          const style = PACKAGE_STYLES[pkg] || PACKAGE_STYLES.WATER;
+          // Fallback to WATER style if package name doesn't match specific style
+          const style = PACKAGE_STYLES[pkg] || PACKAGE_STYLES.WATER; 
+          
           const batchSize = data ? data.batchSize : 180;
           const seatsInBatch = data ? data.seatsInCurrentBatch : 0;
           const percent = Math.min((seatsInBatch / batchSize) * 100, 100);
@@ -259,7 +261,7 @@ export default function Packages() {
               <ActionButton 
                 $gradient={selectedPkg.style.gradient} 
                 onClick={book} 
-                disabled={loading || !incomeType} // Disable if no income type selected
+                disabled={loading || !incomeType} 
               >
                 {loading ? "Processing..." : (incomeType ? `Invest with ${incomeType} Plan` : "Select a Plan to Invest")}
               </ActionButton>
