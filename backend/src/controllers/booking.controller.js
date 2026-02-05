@@ -1,14 +1,21 @@
 const pool = require("../config/db");
 
-// ✅ BOOK SEAT (With Batch System & Instant Bonus)
+// ✅ BOOK SEAT (Updated for Income Plan Selection)
 exports.bookSeat = async(req, res) => {
     const client = await pool.connect(); // Use a client for transactions
     try {
         const userId = req.user.id;
-        const { packageName } = req.body;
+        // 🚀 RECEIVE 'incomeType' FROM FRONTEND
+        const { packageName, incomeType } = req.body;
 
         if (!packageName) {
             return res.status(400).json({ message: "Package name is required" });
+        }
+
+        // 🛡️ Validate Income Type
+        const validTypes = ["DAILY", "MONTHLY", "YEARLY"];
+        if (!incomeType || !validTypes.includes(incomeType)) {
+            return res.status(400).json({ message: "Invalid Income Plan selected" });
         }
 
         await client.query("BEGIN"); // Start Transaction
@@ -21,13 +28,11 @@ exports.bookSeat = async(req, res) => {
         }
 
         const pkg = pkgRes.rows[0];
-        // ⚠️ USE DB 'total_seats' AS BATCH SIZE
         const BATCH_SIZE = pkg.total_seats || 180;
         const price = parseFloat(pkg.ticket_price);
 
-        // 2. Check User Wallet Balance (using 'balance')
+        // 2. Check User Wallet Balance
         const walletRes = await client.query("SELECT balance FROM wallets WHERE user_id = $1", [userId]);
-
         const userBalance = parseFloat((walletRes.rows[0] && walletRes.rows[0].balance) || 0);
 
         if (userBalance < price) {
@@ -47,21 +52,22 @@ exports.bookSeat = async(req, res) => {
         const sixPercent = price * 0.06;
         const otsBonus = sixPercent / seatInBatch;
 
-        // 5. Deduct Ticket Price from Wallet (Actual Payment)
+        // 5. Deduct Ticket Price from Wallet
         await client.query(
             "UPDATE wallets SET balance = balance - $1 WHERE user_id = $2", [price, userId]
         );
 
-        // 6. Create Seat Record
+        // 6. Create Seat Record (🚀 SAVING INCOME TYPE)
+        // Make sure your 'seats' table has an 'income_type' column!
+        // If not, run: ALTER TABLE seats ADD COLUMN income_type VARCHAR(20) DEFAULT 'DAILY';
         await client.query(
             `INSERT INTO seats (
                 user_id, package_id, seat_number, batch_number, status, 
-                booked_at, ots_income
-            ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5) RETURNING id`, [userId, pkg.id, seatInBatch, currentBatch, otsBonus]
+                booked_at, ots_income, income_type
+            ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6) RETURNING id`, [userId, pkg.id, seatInBatch, currentBatch, otsBonus, incomeType]
         );
 
-        // 7. Record Investment as a Withdrawal (Transaction History)
-        // 🛠 FIX: Added 'net_amount' (Same as price because fee is 0)
+        // 7. Record Investment as a Withdrawal (History)
         await client.query(
             `INSERT INTO withdrawals (user_id, amount, fee, net_amount, status, created_at) 
              VALUES ($1, $2, 0, $2, 'APPROVED', NOW())`, [userId, price]
@@ -85,6 +91,7 @@ exports.bookSeat = async(req, res) => {
             message: "Seat booked successfully ✅",
             data: {
                 package: pkg.name,
+                plan: incomeType, // Send back selected plan
                 batch: currentBatch,
                 seat: seatInBatch,
                 bonus: otsBonus.toFixed(4),
@@ -93,7 +100,7 @@ exports.bookSeat = async(req, res) => {
         });
 
     } catch (error) {
-        await client.query("ROLLBACK"); // Undo changes on error
+        await client.query("ROLLBACK");
         console.error("BOOK SEAT ERROR 👉", error.message);
         res.status(400).json({ message: error.message });
     } finally {
@@ -101,7 +108,7 @@ exports.bookSeat = async(req, res) => {
     }
 };
 
-// ✅ Get All Bookings for Admin
+// ✅ Get All Bookings for Admin (Updated to show Income Type)
 exports.getAllBookings = async(req, res) => {
     try {
         const query = `
@@ -109,6 +116,7 @@ exports.getAllBookings = async(req, res) => {
                 s.seat_number, 
                 s.batch_number,
                 s.booked_at, 
+                s.income_type,  -- 👈 Fetch Plan Type
                 p.name as package_name, 
                 p.ticket_price, 
                 u.email,
