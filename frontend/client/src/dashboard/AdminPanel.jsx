@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   ShieldCheck, 
   Check, 
@@ -13,12 +13,13 @@ import {
   TrendingUp,
   DollarSign,
   Users,
-  Layers // 👈 Added Icon for Plan
+  Layers,
+  ChevronRight 
 } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast"; 
 
-// --- STYLED COMPONENTS (No Changes) ---
+// --- STYLED COMPONENTS ---
 
 const Container = styled(motion.div)`
   max-width: 1200px;
@@ -60,6 +61,16 @@ const StatCard = styled(motion.div)`
   align-items: center;
   gap: 20px;
   backdrop-filter: blur(10px);
+  position: relative;
+  transition: all 0.2s;
+  
+  /* Conditional styling for clickable cards */
+  cursor: ${props => props.$clickable ? "pointer" : "default"};
+  &:hover {
+    background: ${props => props.$clickable ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.03)"};
+    border-color: ${props => props.$clickable ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.08)"};
+    transform: ${props => props.$clickable ? "translateY(-5px)" : "none"};
+  }
 `;
 
 const StatIcon = styled.div`
@@ -207,6 +218,28 @@ const EmptyState = styled.div`
   border-radius: 16px;
 `;
 
+// --- MODAL COMPONENTS ---
+const Overlay = styled(motion.div)`
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+`;
+const ModalContainer = styled(motion.div)`
+  background: #121212; border: 1px solid rgba(255,255,255,0.1);
+  width: 100%; max-width: 900px; max-height: 85vh; border-radius: 24px; 
+  padding: 30px; display: flex; flex-direction: column;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+`;
+const ModalHeader = styled.div`
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+  h3 { margin: 0; font-size: 22px; color: #fff; display: flex; align-items: center; gap: 10px; }
+`;
+const CloseButton = styled.button`
+  background: rgba(255,255,255,0.1); border: none; color: #fff; 
+  width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  &:hover { background: rgba(255,255,255,0.2); }
+`;
+
 // --- HELPER FUNCTION ---
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -217,7 +250,9 @@ const formatDate = (dateString) => {
 export default function AdminPanel() {
   const [requests, setRequests] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [users, setUsers] = useState([]); 
   const [loading, setLoading] = useState(true);
+  const [activeModal, setActiveModal] = useState(null);
   const [stats, setStats] = useState({ revenue: 0, users: 0, pending: 0 });
 
   useEffect(() => {
@@ -226,20 +261,22 @@ export default function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [reqRes, bookRes] = await Promise.all([
+      const [reqRes, bookRes, userRes] = await Promise.all([
         api.get("/admin/requests"),
-        api.get("/booking/all")
+        api.get("/booking/all"),
+        api.get("/admin/users")
       ]);
 
       setRequests(reqRes.data || []);
       setBookings(bookRes.data || []);
+      setUsers(userRes.data || []);
 
       const totalRev = (bookRes.data || []).reduce((acc, curr) => acc + Number(curr.ticket_price), 0);
-      const uniqueUsers = new Set((bookRes.data || []).map(b => b.email)).size;
+      const totalUsersCount = userRes.data?.length || 0;
       
       setStats({
         revenue: totalRev,
-        users: uniqueUsers + 5,
+        users: totalUsersCount,
         pending: (reqRes.data || []).length
       });
 
@@ -343,25 +380,36 @@ export default function AdminPanel() {
         <Title>Admin Console</Title>
       </Header>
 
-      {/* 📊 TOP STATS GRID */}
+      {/* 📊 STATS GRID */}
       <StatsGrid>
-        <StatCard whileHover={{ y: -5 }}>
+        {/* REVENUE CARD -> Opens Revenue Modal */}
+        <StatCard 
+          $clickable={true}
+          onClick={() => setActiveModal('revenue')}
+        >
           <StatIcon bg="rgba(62, 166, 255, 0.1)" color="#3ea6ff"><DollarSign /></StatIcon>
           <StatInfo>
             <h4>Total Revenue</h4>
             <span>${stats.revenue.toLocaleString()}</span>
           </StatInfo>
+          <ChevronRight size={20} color="#555" style={{ marginLeft: 'auto' }} />
         </StatCard>
 
-        <StatCard whileHover={{ y: -5 }}>
+        {/* USERS CARD -> Opens Users Modal */}
+        <StatCard 
+          $clickable={true}
+          onClick={() => setActiveModal('users')}
+        >
           <StatIcon bg="rgba(142, 45, 226, 0.1)" color="#8e2de2"><Users /></StatIcon>
           <StatInfo>
             <h4>Total Users</h4>
             <span>{stats.users}</span>
           </StatInfo>
+          <ChevronRight size={20} color="#555" style={{ marginLeft: 'auto' }} />
         </StatCard>
 
-        <StatCard whileHover={{ y: -5 }}>
+        {/* Pending Card (Stays the same) */}
+        <StatCard>
           <StatIcon bg="rgba(241, 196, 15, 0.1)" color="#f1c40f"><AlertCircle /></StatIcon>
           <StatInfo>
             <h4>Pending Actions</h4>
@@ -507,8 +555,8 @@ export default function AdminPanel() {
                     {/* ⚠️ UPDATED: DISPLAY PLAN TYPE (DAILY, MONTHLY, YEARLY) */}
                     <Td>
                       <Badge bg="rgba(142, 45, 226, 0.1)" color="#8e2de2" border="rgba(142, 45, 226, 0.2)">
-                         <Layers size={12} style={{marginRight:5}}/>
-                         {b.income_type || "DAILY"}
+                          <Layers size={12} style={{marginRight:5}}/>
+                          {b.income_type || "DAILY"}
                       </Badge>
                     </Td>
                     <Td style={{fontFamily: 'monospace', fontSize:'15px', fontWeight: 'bold', color: '#fff'}}>
@@ -524,6 +572,61 @@ export default function AdminPanel() {
           </TableContainer>
         )}
       </Section>
+
+      {/* 🔥 MODALS START HERE (Users & Revenue) */}
+      <AnimatePresence>
+        {activeModal && (
+          <Overlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveModal(null)}>
+            <ModalContainer onClick={e => e.stopPropagation()} layoutId={activeModal}>
+              <ModalHeader>
+                <h3>
+                  {activeModal === 'users' ? <><Users size={24} color="#8e2de2"/> All Registered Users</> : <><DollarSign size={24} color="#3ea6ff"/> Revenue Details (All Bookings)</>}
+                </h3>
+                <CloseButton onClick={() => setActiveModal(null)}><X size={20}/></CloseButton>
+              </ModalHeader>
+
+              <TableContainer style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                <Table>
+                  {activeModal === 'users' ? (
+                    <>
+                      <thead><tr><Th>ID</Th><Th>Name</Th><Th>Email</Th><Th>Role</Th><Th>Balance</Th><Th>Joined</Th></tr></thead>
+                      <tbody>
+                        {users.map(u => (
+                          <Tr key={u.id}>
+                            <Td>#{u.id}</Td>
+                            <Td><span style={{color:'#fff', fontWeight:600}}>{u.name}</span></Td>
+                            <Td>{u.email}</Td>
+                            <Td><Badge bg={u.role==='admin' ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'} color={u.role==='admin' ? '#e74c3c' : '#2ecc71'} border="transparent">{u.role}</Badge></Td>
+                            <Td style={{color: '#fff', fontWeight:'bold'}}>${Number(u.balance || 0).toLocaleString()}</Td>
+                            <Td>{formatDate(u.created_at)}</Td>
+                          </Tr>
+                        ))}
+                      </tbody>
+                    </>
+                  ) : (
+                    <>
+                      <thead><tr><Th>Date</Th><Th>User Details</Th><Th>Package</Th><Th>Plan</Th><Th>Seat</Th><Th>Amount</Th></tr></thead>
+                      <tbody>
+                        {bookings.map((b, i) => (
+                          <Tr key={i}>
+                            <Td><div style={{display:'flex',gap:8,alignItems:'center'}}><Calendar size={14} color="#666"/>{formatDate(b.booked_at)}</div></Td>
+                            <Td><UserInfo><span>{b.user_name}</span><small>{b.email}</small></UserInfo></Td>
+                            <Td><Badge bg="rgba(62,166,255,0.1)" color="#3ea6ff" border="transparent">{b.package_name}</Badge></Td>
+                            <Td><Badge bg="rgba(142,45,226,0.1)" color="#8e2de2" border="transparent">{b.income_type || "DAILY"}</Badge></Td>
+                            <Td style={{fontFamily:'monospace'}}>#{b.seat_number}</Td>
+                            <Td style={{color:'#2ecc71', fontWeight:'bold'}}>${Number(b.ticket_price).toLocaleString()}</Td>
+                          </Tr>
+                        ))}
+                      </tbody>
+                    </>
+                  )}
+                </Table>
+              </TableContainer>
+            </ModalContainer>
+          </Overlay>
+        )}
+      </AnimatePresence>
+
     </Container>
   );
 }
