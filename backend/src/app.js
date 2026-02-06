@@ -12,7 +12,7 @@ const referralRoutes = require("./routes/referral.routes");
 const adminRoutes = require("./routes/admin.routes");
 const transactionsRoutes = require("./routes/transactions.routes");
 const supportRoutes = require("./routes/support.routes");
-const chatRoutes = require("./routes/chat.Routes");
+const chatRoutes = require("./routes/chat.routes");
 
 const app = express(); // ✅ app must be created FIRST
 
