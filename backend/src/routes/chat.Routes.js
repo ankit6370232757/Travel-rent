@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const chatController = require("../controllers/chatController");
+const chatController = require("../controllers/chat.Controller");
 
 // POST /api/chat
 router.post("/", chatController.chatWithGemini);
