@@ -12,6 +12,7 @@ const referralRoutes = require("./routes/referral.routes");
 const adminRoutes = require("./routes/admin.routes");
 const transactionsRoutes = require("./routes/transactions.routes");
 const supportRoutes = require("./routes/support.routes");
+const chatRoutes = require("./src/routes/chatRoutes");
 
 const app = express(); // ✅ app must be created FIRST
 
@@ -39,5 +40,6 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/transactions", transactionsRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/chat", chatRoutes);
 
 module.exports = app;
