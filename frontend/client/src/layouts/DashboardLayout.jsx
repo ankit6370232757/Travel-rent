@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
 import Sidebar from "../components/Sidebar";
+import ChatBot from "../components/ChatBot";
 
 // Components
 import Wallet from "../dashboard/Wallet";
@@ -247,6 +248,7 @@ export default function DashboardLayout() {
           </motion.div>
         </AnimatePresence>
       </MainContent>
+      <ChatBot />
     </LayoutWrapper>
   );
 }
