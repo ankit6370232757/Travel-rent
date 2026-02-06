@@ -5,5 +5,6 @@ const adminController = require("../controllers/admin.controller");
 
 router.get("/requests", authMiddleware, adminController.getPendingRequests);
 router.post("/handle", authMiddleware, adminController.handleRequest);
+router.get("/users", authMiddleware, adminController.getAllUsers);
 
 module.exports = router;
