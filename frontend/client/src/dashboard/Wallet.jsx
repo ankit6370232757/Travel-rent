@@ -3,15 +3,16 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import { Wallet as WalletIcon, ArrowUpRight, Lock } from "lucide-react";
 import api from "../api/axios";
+import CountUp from "react-countup"; // 👈 1. Import CountUp
 
-// ✨ Glassmorphism Card Style
+// ✨ Glassmorphism Card Style (No Changes)
 const Card = styled(motion.div)`
   background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   padding: 30px;
-  height: 100%; /* Ensures it fills grid area */
+  height: 100%; 
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -185,7 +186,17 @@ export default function Wallet() {
         </Header>
         
         <BalanceWrapper>
-          <Balance><span>$</span>{Number(wallet.balance).toLocaleString()}</Balance>
+          <Balance>
+            <span>$</span>
+            {/* 2. REPLACED STATIC NUMBER WITH ROLLING COUNTUP */}
+            <CountUp 
+              start={0} 
+              end={Number(wallet.balance)} 
+              duration={2.5} 
+              separator="," 
+              decimals={2}
+            />
+          </Balance>
           
           {Number(wallet.locked_balance) > 0 && (
             <LockedFunds>

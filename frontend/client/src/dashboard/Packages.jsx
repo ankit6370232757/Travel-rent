@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Droplets, Mountain, Wind, Flame, Rocket, Zap, // 👈 Added Zap Icon for X1
+  Droplets, Mountain, Wind, Flame, Rocket, Zap, 
   X, Calendar, TrendingUp, CheckCircle
 } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast"; 
+import Confetti from "react-confetti"; // 👈 1. IMPORT CONFETTI
 
 // --- CONFIGURATION ---
-// ✅ Added "X1" to the list
 const PACKAGES = ["WATER", "EARTH", "AIR", "FIRE", "SPACE", "X1"];
 
 const PACKAGE_STYLES = {
@@ -18,8 +18,6 @@ const PACKAGE_STYLES = {
   AIR:   { color: "#d4fc79", gradient: "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)", icon: <Wind size={24} /> },
   FIRE:  { color: "#ff512f", gradient: "linear-gradient(135deg, #ff512f 0%, #dd2476 100%)", icon: <Flame size={24} /> },
   SPACE: { color: "#8E2DE2", gradient: "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)", icon: <Rocket size={24} /> },
-  
-  // ✅ NEW STYLE FOR X1 (Gold/Premium Theme)
   X1:    { color: "#FFD700", gradient: "linear-gradient(135deg, #FFD700 0%, #FDB931 100%)", icon: <Zap size={24} /> },
 };
 
@@ -69,7 +67,6 @@ const CloseButton = styled.button`position: absolute; top: 20px; right: 20px; ba
 
 const StatGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px 0 25px 0;`;
 
-// ✨ SELECTABLE INCOME BOX
 const StatBox = styled.div`
   background: ${props => props.$selected ? "rgba(62, 166, 255, 0.15)" : "rgba(255,255,255,0.05)"}; 
   border: 2px solid ${props => props.$selected ? "#3ea6ff" : "transparent"};
@@ -104,6 +101,7 @@ export default function Packages() {
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [incomeType, setIncomeType] = useState(null); 
   const [loading, setLoading] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false); // 👈 2. ADD STATE
 
   useEffect(() => {
     PACKAGES.forEach(async (pkg) => {
@@ -148,10 +146,14 @@ export default function Packages() {
         incomeType: incomeType 
       });
       
+      // ✅ 3. TRIGGER CONFETTI ON SUCCESS
+      setShowConfetti(true);
       toast.success("Investment Successful! Bonus Credited.", { id: loadingToast });
+      
       setLoading(false);
       setSelectedPkg(null);
       
+      // Reload logic kept same (1.5s)
       setTimeout(() => window.location.reload(), 1500);
       
     } catch (err) {
@@ -163,12 +165,14 @@ export default function Packages() {
 
   return (
     <Container>
+      {/* 4. RENDER CONFETTI (FULL SCREEN) */}
+      {showConfetti && <Confetti numberOfPieces={500} gravity={0.3} style={{zIndex: 9999}} />}
+
       <Header><h2>Investment Packages</h2><p>Select a package and choose your income plan.</p></Header>
       
       <Grid initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
         {PACKAGES.map(pkg => {
           const data = status[pkg];
-          // Fallback to WATER style if package name doesn't match specific style
           const style = PACKAGE_STYLES[pkg] || PACKAGE_STYLES.WATER; 
           
           const batchSize = data ? data.batchSize : 180;
@@ -227,7 +231,6 @@ export default function Packages() {
                 {incomeType ? "Plan Selected:" : "Choose Your Income Plan"}
               </SelectionLabel>
               
-              {/* ✨ SELECTABLE INCOME GRID */}
               <StatGrid>
                 <StatBox 
                   $selected={incomeType === "DAILY"} 
