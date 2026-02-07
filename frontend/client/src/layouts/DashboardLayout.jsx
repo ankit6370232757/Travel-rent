@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
 import Sidebar from "../components/Sidebar";
 import ChatBot from "../components/ChatBot";
+import RocketSplash from "../components/RocketSplash"; // 👈 1. IMPORT ROCKET COMPONENT
 
 // Components
 import Wallet from "../dashboard/Wallet";
@@ -14,7 +15,7 @@ import Income from "../dashboard/Income";
 import Packages from "../dashboard/Packages";
 import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
-import AdminPanel from "../dashboard/AdminPanel"; // Ensure this path is correct based on your folder structure
+import AdminPanel from "../dashboard/AdminPanel"; // Check path if needed
 
 // --- STYLED COMPONENTS ---
 
@@ -150,18 +151,17 @@ export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [user, setUser] = useState({ name: "User", email: "..." });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true); // 👈 2. ADD SPLASH STATE
   
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. Load User (✅ FIXED: Handles Nested User Data)
+  // 1. Load User
   useEffect(() => {
     const storedData = localStorage.getItem("user");
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
-        // If the data is like { token: "...", user: { role: "admin" } }
-        // We need to grab the inner 'user' object.
         const realUser = parsedData.user || parsedData;
         setUser(realUser);
       } catch (err) {
@@ -170,23 +170,20 @@ export default function DashboardLayout() {
     }
   }, []);
 
-  // 2. 🛡️ URL Sync (Admin Mode)
+  // 2. URL Sync
   useEffect(() => {
     if (location.pathname === "/admin") {
       setActiveTab("admin");
     } else {
-      // If user navigates BACK to dashboard via URL, ensure tab updates
       if (activeTab === "admin") setActiveTab("dashboard");
     }
   }, [location.pathname]);
 
-  // 3. 🛡️ Handle Tab Switching & Routing
+  // 3. Handle Tab Switching
   const handleTabChange = (tabId) => {
     if (tabId === 'admin') {
-      navigate('/admin'); // Go to Admin URL
+      navigate('/admin'); 
     } else {
-      // If we are currently on the Admin page but clicking a User tab (like Wallet)
-      // We must navigate back to the Dashboard URL to prevent getting stuck
       if (location.pathname === '/admin') {
         navigate('/dashboard');
       }
@@ -219,6 +216,13 @@ export default function DashboardLayout() {
 
   return (
     <LayoutWrapper>
+      {/* 🚀 3. ROCKET ANIMATION OVERLAY */}
+      <AnimatePresence>
+        {showSplash && (
+          <RocketSplash onComplete={() => setShowSplash(false)} />
+        )}
+      </AnimatePresence>
+
       <BackgroundGlow />
       
       <MobileTopBar>
@@ -228,7 +232,7 @@ export default function DashboardLayout() {
 
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={handleTabChange} // 👈 Using the smart handler
+        setActiveTab={handleTabChange} 
         onLogout={handleLogout}
         user={user}
         isOpen={isSidebarOpen}
