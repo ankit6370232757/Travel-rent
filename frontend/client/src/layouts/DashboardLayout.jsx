@@ -5,7 +5,7 @@ import { Menu } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
 import Sidebar from "../components/Sidebar";
 import ChatBot from "../components/ChatBot";
-import RocketSplash from "../components/RocketSplash"; // 👈 1. IMPORT ROCKET COMPONENT
+import RocketSplash from "../components/RocketSplash"; 
 
 // Components
 import Wallet from "../dashboard/Wallet";
@@ -15,7 +15,7 @@ import Income from "../dashboard/Income";
 import Packages from "../dashboard/Packages";
 import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
-import AdminPanel from "../dashboard/AdminPanel"; // Check path if needed
+import AdminPanel from "../dashboard/AdminPanel"; 
 
 // --- STYLED COMPONENTS ---
 
@@ -149,9 +149,9 @@ const Overview = ({ user }) => (
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [user, setUser] = useState({ name: "User", email: "..." });
+  const [user, setUser] = useState({ name: "User", email: "...", role: "user" });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [showSplash, setShowSplash] = useState(true); // 👈 2. ADD SPLASH STATE
+  const [showSplash, setShowSplash] = useState(true); 
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -162,6 +162,7 @@ export default function DashboardLayout() {
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
+        // Handle nested user object if it exists (e.g. res.data.user)
         const realUser = parsedData.user || parsedData;
         setUser(realUser);
       } catch (err) {
@@ -170,14 +171,27 @@ export default function DashboardLayout() {
     }
   }, []);
 
-  // 2. URL Sync
+  // 2. 🛡️ URL Sync & ROLE PROTECTION
   useEffect(() => {
-    if (location.pathname === "/admin") {
-      setActiveTab("admin");
-    } else {
-      if (activeTab === "admin") setActiveTab("dashboard");
+    if (!user || !user.email) return; // Wait until user is loaded
+
+    // A. IF USER IS ADMIN
+    if (user.role === 'admin') {
+       // Force them to Admin Tab if they aren't there
+       if (activeTab !== 'admin') {
+         setActiveTab('admin');
+         if (location.pathname !== '/admin') navigate('/admin');
+       }
+    } 
+    // B. IF NORMAL USER
+    else {
+       // If they try to go to Admin, kick them back to Dashboard
+       if (activeTab === 'admin' || location.pathname === '/admin') {
+         setActiveTab('dashboard');
+         navigate('/dashboard');
+       }
     }
-  }, [location.pathname]);
+  }, [user, activeTab, location.pathname, navigate]);
 
   // 3. Handle Tab Switching
   const handleTabChange = (tabId) => {

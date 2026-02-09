@@ -1,7 +1,6 @@
 import React from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-// ❌ Removed 'useNavigate' (Parent handles this now)
 import { 
   Home, 
   Wallet, 
@@ -11,13 +10,12 @@ import {
   Box, 
   X,
   CreditCard,
-  History,
-  HistoryIcon,
-  SettingsIcon,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
   Shield 
 } from "lucide-react";
 
-// --- STYLED COMPONENTS (No Changes Needed) ---
+// --- STYLED COMPONENTS ---
 const Container = styled(motion.div)`
   width: 280px;
   height: 100vh;
@@ -95,8 +93,8 @@ const MenuItem = styled(motion.div)`
   border: 1px solid ${props => props.$active ? "rgba(62, 166, 255, 0.2)" : "transparent"};
   
   ${props => props.$isSpecial && `
-     border: 1px solid rgba(255, 77, 77, 0.2);
-     background: rgba(255, 77, 77, 0.05);
+      border: 1px solid rgba(255, 77, 77, 0.2);
+      background: rgba(255, 77, 77, 0.05);
   `}
 
   position: relative;
@@ -171,24 +169,26 @@ const UserMeta = styled.div`
 
 export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose }) {
   
-  const menuItems = [
-    { id: "dashboard", icon: <Home size={20} />, label: "Overview" },
-    { id: "wallet", icon: <Wallet size={20} />, label: "My Wallet" },
-    { id: "withdraw", icon: <CreditCard size={20} />, label: "Withdraw" },
-    { id: "history", icon: <HistoryIcon size={20} />, label: "History" },
-    { id: "packages", icon: <Box size={20} />, label: "Packages" },
-    { id: "network", icon: <Users size={20} />, label: "My Network" },
-    { id: "earnings", icon: <TrendingUp size={20} />, label: "Analytics" },
-    { id: "settings", icon: <SettingsIcon size={20} />, label: "Settings" },
-  ];
+  let menuItems = [];
 
+  // 🛡️ LOGIC CHANGE: Exclusively show items based on role
   if (user && user.role === 'admin') {
-    menuItems.push({ 
-      id: "admin", 
-      icon: <Shield size={20} />, 
-      label: "Admin Panel", 
-      isSpecial: true 
-    });
+    // 1. ADMIN MENU
+    menuItems = [
+      { id: "admin", icon: <Shield size={20} />, label: "Admin Panel", isSpecial: true }
+    ];
+  } else {
+    // 2. USER MENU
+    menuItems = [
+      { id: "dashboard", icon: <Home size={20} />, label: "Overview" },
+      { id: "wallet", icon: <Wallet size={20} />, label: "My Wallet" },
+      { id: "withdraw", icon: <CreditCard size={20} />, label: "Withdraw" },
+      { id: "history", icon: <HistoryIcon size={20} />, label: "History" },
+      { id: "packages", icon: <Box size={20} />, label: "Packages" },
+      { id: "network", icon: <Users size={20} />, label: "My Network" },
+      { id: "earnings", icon: <TrendingUp size={20} />, label: "Analytics" },
+      { id: "settings", icon: <SettingsIcon size={20} />, label: "Settings" },
+    ];
   }
 
   return (
@@ -212,8 +212,6 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                 $active={activeTab === item.id}
                 $isSpecial={item.isSpecial}
                 onClick={() => {
-                  // ✅ CLEANER: Just tell Parent "Admin Clicked" or "Wallet Clicked"
-                  // The Parent (DashboardLayout) handles the URL logic.
                   setActiveTab(item.id); 
                   if (window.innerWidth <= 768) onClose();
                 }}
@@ -240,6 +238,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
               <UserMeta>
                 <strong>{user?.name || "User"}</strong>
                 <span>{user?.email}</span>
+                {user?.role === 'admin' && <span style={{color: '#ff4d4d', fontSize: '10px', fontWeight: 'bold'}}>ADMIN ACCESS</span>}
               </UserMeta>
             </UserCard>
           </UserSection>

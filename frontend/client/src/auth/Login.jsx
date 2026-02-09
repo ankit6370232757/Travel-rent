@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
-import toast from "react-hot-toast"; // 👈 Import Toast
+import toast from "react-hot-toast"; 
 
 // --- STYLED COMPONENTS (No Changes) ---
 const Container = styled.div`
@@ -71,33 +71,33 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
-    // ❌ OLD: alert("Please fill in all fields");
-    // ✅ NEW: Toast Error
+    // Basic Validation
     if(!email || !password) return toast.error("Please fill in all fields");
     
     setLoading(true);
-    const loadingToast = toast.loading("Signing in..."); // Optional loading state
+    const loadingToast = toast.loading("Signing in...");
 
     try {
       const res = await api.post("/auth/login", { email, password });
       
-      // 1. Save Login Data
+      // 1. Save Login Data to Context & LocalStorage
       login(res.data);
       
-      // ✅ NEW: Toast Success (Dismiss loading and show success)
+      // 2. Success Message
       toast.success("Login Successful!", { id: loadingToast });
 
-      // 2. Always go to Dashboard (Logic Unchanged)
-      navigate("/dashboard"); 
+      // 3. ✅ Role-Based Redirection
+      // If user is Admin, go to Admin Panel. Else, go to Dashboard.
+      if (res.data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
 
     } catch (err) {
       console.error(err);
-      
-      // ❌ OLD: alert("Invalid email or password");
-      // ✅ NEW: Toast Error with backend message if available
       const errorMessage = err.response?.data?.message || "Invalid email or password";
       toast.error(errorMessage, { id: loadingToast });
-      
       setLoading(false);
     }
   };
