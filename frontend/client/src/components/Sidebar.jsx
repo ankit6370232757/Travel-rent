@@ -18,7 +18,9 @@ import {
   UserCheck, 
   ChevronDown, 
   ChevronRight,
-  Sliders // 👈 Imported Sliders icon for Settings
+  Sliders,
+  Package,
+  Banknote // 👈 Imported Sliders icon for Settings
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -257,6 +259,20 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                       >
                         <Sliders size={16} /> System Settings
                       </MenuItem>
+                      <MenuItem 
+  $isAdmin={true} 
+  $active={activeTab === "admin-packages"} 
+  onClick={() => handleNav("admin-packages")}
+>
+  <Package size={16} /> Manage Plans  {/* 👈 New Item */}
+</MenuItem>
+<MenuItem 
+  $isAdmin={true} 
+  $active={activeTab === "admin-finance"} 
+  onClick={() => handleNav("admin-finance")}
+>
+  <Banknote size={16} /> Finance Log  {/* 👈 New Item */}
+</MenuItem>
                     </SubMenu>
                   )}
                 </AnimatePresence>

@@ -10,6 +10,8 @@ import AdminOverview from "./admin/AdminOverview";
 import AdminRequests from "./admin/AdminRequests";
 import AdminUsers from "./admin/AdminUsers";
 import AdminSettings from "./admin/AdminSettings";
+import AdminPackages from "./admin/AdminPackages";
+import AdminFinance from "./admin/AdminFinance";
 
 // --- STYLED COMPONENTS ---
 const Container = styled.div`
@@ -124,6 +126,12 @@ export default function AdminPanel({ initialView = "overview" }) {
         {activeTab === "settings" && (
            <AdminSettings key="settings" />
         )}
+        {activeTab === "packages" && (
+    <AdminPackages key="packages" />
+)}
+{activeTab === "finance" && (
+    <AdminFinance key="finance" />
+)}
       </AnimatePresence>
     </Container>
   );
