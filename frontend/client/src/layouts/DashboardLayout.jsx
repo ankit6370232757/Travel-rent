@@ -173,20 +173,20 @@ export default function DashboardLayout() {
 
   // 2. 🛡️ URL Sync & ROLE PROTECTION
   useEffect(() => {
-    if (!user || !user.email) return; // Wait until user is loaded
+    if (!user || !user.email) return; 
 
     // A. IF USER IS ADMIN
     if (user.role === 'admin') {
-       // Force them to Admin Tab if they aren't there
-       if (activeTab !== 'admin') {
-         setActiveTab('admin');
+       // Force them to an Admin Tab if they aren't on one
+       if (!activeTab.startsWith("admin-")) {
+         setActiveTab('admin-overview'); // Default to Admin Overview
          if (location.pathname !== '/admin') navigate('/admin');
        }
     } 
     // B. IF NORMAL USER
     else {
        // If they try to go to Admin, kick them back to Dashboard
-       if (activeTab === 'admin' || location.pathname === '/admin') {
+       if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
          setActiveTab('dashboard');
          navigate('/dashboard');
        }
@@ -195,14 +195,13 @@ export default function DashboardLayout() {
 
   // 3. Handle Tab Switching
   const handleTabChange = (tabId) => {
-    if (tabId === 'admin') {
-      navigate('/admin'); 
+    // If clicking an admin tab, ensure we are on /admin route
+    if (tabId.startsWith("admin-")) {
+       if (location.pathname !== '/admin') navigate('/admin');
     } else {
-      if (location.pathname === '/admin') {
-        navigate('/dashboard');
-      }
-      setActiveTab(tabId);
+       if (location.pathname === '/admin') navigate('/dashboard');
     }
+    setActiveTab(tabId);
   };
 
   const handleLogout = () => {
@@ -214,6 +213,15 @@ export default function DashboardLayout() {
   };
 
   const renderContent = () => {
+    // 🛡️ ADMIN ROUTING LOGIC
+    // Checks if tab starts with "admin-" (e.g. "admin-requests")
+    if (activeTab.startsWith("admin-")) {
+      // Passes the specific view ("requests") to the AdminPanel
+      const view = activeTab.replace("admin-", ""); 
+      return <AdminPanel initialView={view} />;
+    }
+
+    // 👤 USER ROUTING LOGIC
     switch (activeTab) {
       case "dashboard": return <Overview user={user} />;
       case "wallet":    return <Wallet />;
@@ -223,7 +231,6 @@ export default function DashboardLayout() {
       case "network":   return <Referrals />;
       case "earnings":  return <Income />;
       case "packages":  return <Packages />;
-      case "admin":     return <AdminPanel />; 
       default:          return <Overview user={user} />;
     }
   };

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -12,7 +12,12 @@ import {
   CreditCard,
   History as HistoryIcon,
   Settings as SettingsIcon,
-  Shield 
+  ShieldAlert, 
+  BarChart2, 
+  FileText, 
+  UserCheck, 
+  ChevronDown, 
+  ChevronRight 
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -28,7 +33,7 @@ const Container = styled(motion.div)`
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 1000;
+  z-index: 100;
   box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
 
   @media (max-width: 768px) {
@@ -41,7 +46,7 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 `;
 
 const Logo = styled.h1`
@@ -75,49 +80,54 @@ const Menu = styled.div`
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  overflow-y: auto; /* Allow scrolling if menu is tall */
+  &::-webkit-scrollbar { display: none; }
+`;
+
+const SectionLabel = styled.div`
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  margin: 20px 0 10px 12px;
+  letter-spacing: 1px;
 `;
 
 const MenuItem = styled(motion.div)`
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
+  gap: 12px;
+  padding: 12px 16px;
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   
-  color: ${props => props.$isSpecial ? "#ff4d4d" : (props.$active ? "#fff" : "#888")};
+  /* 🎨 Dynamic Color based on Admin status */
+  color: ${props => props.$active ? (props.$isAdmin ? "#e74c3c" : "#fff") : "#888"};
   
-  background: ${props => props.$active ? "linear-gradient(90deg, rgba(62, 166, 255, 0.15), rgba(62, 166, 255, 0.05))" : "transparent"};
-  border: 1px solid ${props => props.$active ? "rgba(62, 166, 255, 0.2)" : "transparent"};
+  background: ${props => props.$active ? (props.$isAdmin ? "rgba(231, 76, 60, 0.1)" : "linear-gradient(90deg, rgba(62, 166, 255, 0.15), rgba(62, 166, 255, 0.05))") : "transparent"};
   
-  ${props => props.$isSpecial && `
-      border: 1px solid rgba(255, 77, 77, 0.2);
-      background: rgba(255, 77, 77, 0.05);
-  `}
+  border: 1px solid ${props => props.$active ? (props.$isAdmin ? "rgba(231, 76, 60, 0.2)" : "rgba(62, 166, 255, 0.2)") : "transparent"};
 
   position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 20px;
-    width: 3px;
-    background: ${props => props.$isSpecial ? "#ff4d4d" : "#3ea6ff"};
-    border-radius: 0 4px 4px 0;
-    opacity: ${props => props.$active ? 1 : 0};
-    transition: opacity 0.3s;
-  }
+  transition: all 0.2s;
 
   &:hover {
-    color: ${props => props.$isSpecial ? "#ff1a1a" : "#fff"};
-    background: rgba(255, 255, 255, 0.03);
+    color: ${props => props.$isAdmin ? "#e74c3c" : "#fff"};
+    background: ${props => props.$isAdmin ? "rgba(231, 76, 60, 0.05)" : "rgba(255, 255, 255, 0.03)"};
   }
+`;
+
+const SubMenu = styled(motion.div)`
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 12px;
+  border-left: 1px solid rgba(255,255,255,0.1);
+  padding-left: 12px;
+  margin-top: 5px;
 `;
 
 const UserSection = styled.div`
@@ -168,28 +178,13 @@ const UserMeta = styled.div`
 `;
 
 export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose }) {
-  
-  let menuItems = [];
+  const [adminExpanded, setAdminExpanded] = useState(true);
+  const isAdmin = user && user.role === 'admin';
 
-  // 🛡️ LOGIC CHANGE: Exclusively show items based on role
-  if (user && user.role === 'admin') {
-    // 1. ADMIN MENU
-    menuItems = [
-      { id: "admin", icon: <Shield size={20} />, label: "Admin Panel", isSpecial: true }
-    ];
-  } else {
-    // 2. USER MENU
-    menuItems = [
-      { id: "dashboard", icon: <Home size={20} />, label: "Overview" },
-      { id: "wallet", icon: <Wallet size={20} />, label: "My Wallet" },
-      { id: "withdraw", icon: <CreditCard size={20} />, label: "Withdraw" },
-      { id: "history", icon: <HistoryIcon size={20} />, label: "History" },
-      { id: "packages", icon: <Box size={20} />, label: "Packages" },
-      { id: "network", icon: <Users size={20} />, label: "My Network" },
-      { id: "earnings", icon: <TrendingUp size={20} />, label: "Analytics" },
-      { id: "settings", icon: <SettingsIcon size={20} />, label: "Settings" },
-    ];
-  }
+  const handleNav = (id) => {
+    setActiveTab(id);
+    if (window.innerWidth <= 768) onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -206,25 +201,89 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
           </Header>
 
           <Menu>
-            {menuItems.map((item, index) => (
-              <MenuItem
-                key={item.id}
-                $active={activeTab === item.id}
-                $isSpecial={item.isSpecial}
-                onClick={() => {
-                  setActiveTab(item.id); 
-                  if (window.innerWidth <= 768) onClose();
-                }}
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.02, x: 5 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {item.icon}
-                {item.label}
-              </MenuItem>
-            ))}
+            {/* 🛡️ ADMIN SECTION (Only for Admins) */}
+            {isAdmin && (
+              <>
+                <SectionLabel style={{ color: '#e74c3c' }}>Administration</SectionLabel>
+                
+                {/* Collapsible Header */}
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={false} 
+                  onClick={() => setAdminExpanded(!adminExpanded)} 
+                  style={{justifyContent: 'space-between'}}
+                >
+                  <div style={{display:'flex', gap:12, alignItems:'center'}}>
+                    <ShieldAlert size={18}/> Admin Console
+                  </div>
+                  {adminExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                </MenuItem>
+
+                {/* Dropdown Items */}
+                <AnimatePresence>
+                  {adminExpanded && (
+                    <SubMenu 
+                      initial={{ height: 0, opacity: 0 }} 
+                      animate={{ height: 'auto', opacity: 1 }} 
+                      exit={{ height: 0, opacity: 0 }}
+                    >
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-overview"} 
+                        onClick={() => handleNav("admin-overview")}
+                      >
+                        <BarChart2 size={16} /> Dashboard
+                      </MenuItem>
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-requests"} 
+                        onClick={() => handleNav("admin-requests")}
+                      >
+                        <FileText size={16} /> Requests
+                      </MenuItem>
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-users"} 
+                        onClick={() => handleNav("admin-users")}
+                      >
+                        <UserCheck size={16} /> User Manager
+                      </MenuItem>
+                    </SubMenu>
+                  )}
+                </AnimatePresence>
+                
+                {/* Divider for Admins */}
+                <div style={{height: 1, background: 'rgba(255,255,255,0.1)', margin: '20px 0'}} />
+              </>
+            )}
+
+            {/* 👤 USER SECTION (For everyone, but Admins might not need it all) */}
+            {!isAdmin && (
+              <>
+                <SectionLabel>Main Menu</SectionLabel>
+                <MenuItem $active={activeTab === "dashboard"} onClick={() => handleNav("dashboard")}>
+                  <Home size={18} /> Overview
+                </MenuItem>
+                <MenuItem $active={activeTab === "wallet"} onClick={() => handleNav("wallet")}>
+                  <Wallet size={18} /> My Wallet
+                </MenuItem>
+                <MenuItem $active={activeTab === "withdraw"} onClick={() => handleNav("withdraw")}>
+                  <CreditCard size={18} /> Withdraw
+                </MenuItem>
+                <MenuItem $active={activeTab === "packages"} onClick={() => handleNav("packages")}>
+                  <Box size={18} /> Packages
+                </MenuItem>
+                <MenuItem $active={activeTab === "history"} onClick={() => handleNav("history")}>
+                  <HistoryIcon size={18} /> History
+                </MenuItem>
+                <MenuItem $active={activeTab === "network"} onClick={() => handleNav("network")}>
+                  <Users size={18} /> My Network
+                </MenuItem>
+                <MenuItem $active={activeTab === "settings"} onClick={() => handleNav("settings")}>
+                  <SettingsIcon size={18} /> Settings
+                </MenuItem>
+              </>
+            )}
           </Menu>
 
           <UserSection>
@@ -234,11 +293,11 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
             </MenuItem>
             
             <UserCard>
-              <UserAvatar>{user?.name?.charAt(0) || "U"}</UserAvatar>
+              <UserAvatar>{user?.name?.charAt(0).toUpperCase() || "U"}</UserAvatar>
               <UserMeta>
                 <strong>{user?.name || "User"}</strong>
                 <span>{user?.email}</span>
-                {user?.role === 'admin' && <span style={{color: '#ff4d4d', fontSize: '10px', fontWeight: 'bold'}}>ADMIN ACCESS</span>}
+                {isAdmin && <span style={{color: '#e74c3c', fontSize: '10px', fontWeight: 'bold', marginTop: 4}}>ADMIN ACCESS</span>}
               </UserMeta>
             </UserCard>
           </UserSection>
