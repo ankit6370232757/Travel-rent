@@ -17,7 +17,8 @@ import {
   FileText, 
   UserCheck, 
   ChevronDown, 
-  ChevronRight 
+  ChevronRight,
+  Sliders // 👈 Imported Sliders icon for Settings
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -247,6 +248,14 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                         onClick={() => handleNav("admin-users")}
                       >
                         <UserCheck size={16} /> User Manager
+                      </MenuItem>
+                      {/* 👇 NEW SETTINGS MENU ITEM */}
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-settings"} 
+                        onClick={() => handleNav("admin-settings")}
+                      >
+                        <Sliders size={16} /> System Settings
                       </MenuItem>
                     </SubMenu>
                   )}
