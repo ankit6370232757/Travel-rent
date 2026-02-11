@@ -5,17 +5,24 @@ const pool = require("../config/db");
 
 exports.register = async(req, res) => {
     try {
-        const { name, email, password, referralCode } = req.body;
+        // 👇 1. Accept phoneNumber from frontend
+        const { name, email, password, referralCode, phoneNumber } = req.body;
 
-        // 1. Check existing user
-        const userExists = await pool.query(
-            "SELECT id FROM users WHERE email = $1", [email]
-        );
-        if (userExists.rows.length > 0) {
-            return res.status(400).json({ message: "Email already registered" });
+        // Validation
+        if (!name || !email || !password || !phoneNumber) {
+            return res.status(400).json({ message: "All fields are required" });
         }
 
-        // 2. Find referrer (if code provided)
+        // 2. Check existing user (Email OR Phone)
+        const userExists = await pool.query(
+            "SELECT id FROM users WHERE email = $1 OR phone_number = $2", [email, phoneNumber]
+        );
+
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ message: "Email or Phone already registered" });
+        }
+
+        // 3. Find referrer (if code provided)
         let referredBy = null;
         if (referralCode) {
             const refUser = await pool.query(
@@ -26,19 +33,19 @@ exports.register = async(req, res) => {
             }
         }
 
-        // 3. Hash password
+        // 4. Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // 4. Generate unique referral code
+        // 5. Generate unique referral code
         const myReferralCode = uuidv4().slice(0, 8).toUpperCase();
 
-        // 5. Insert user (Default role is handled by DB default usually, or you can add it here)
+        // 6. Insert user (👇 Added phone_number here)
         const newUser = await pool.query(
-            `INSERT INTO users (name, email, password, referral_code, referred_by)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`, [name, email, hashedPassword, myReferralCode, referredBy]
+            `INSERT INTO users (name, email, password, referral_code, referred_by, phone_number)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, [name, email, hashedPassword, myReferralCode, referredBy, phoneNumber]
         );
 
-        // 6. Create wallet for new user
+        // 7. Create wallet for new user
         await pool.query(
             "INSERT INTO wallets (user_id, balance) VALUES ($1, 0)", [newUser.rows[0].id]
         );
@@ -49,8 +56,8 @@ exports.register = async(req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Registration failed" });
+        console.error("Registration Error:", error);
+        res.status(500).json({ message: "Registration failed", error: error.message });
     }
 };
 
@@ -75,20 +82,21 @@ exports.login = async(req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
-        // 3. Generate Token (✅ Added 'role' here for security)
+        // 3. Generate Token
         const token = jwt.sign({ id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET, { expiresIn: "7d" }
         );
 
-        // 4. Send Response (✅ Added 'role' here for Frontend Sidebar)
+        // 4. Send Response (👇 Added phone_number to response)
         res.json({
             token,
             user: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role, // 👈 CRITICAL FIX: The sidebar needs this!
-                referralCode: user.referral_code
+                role: user.role,
+                referralCode: user.referral_code,
+                phoneNumber: user.phone_number // Useful to show in profile later
             }
         });
 
