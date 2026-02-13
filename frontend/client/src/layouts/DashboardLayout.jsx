@@ -25,6 +25,7 @@ const LayoutWrapper = styled.div`
   color: #fff;
   position: relative;
   overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
 `;
 
 const MainContent = styled.main`
@@ -96,17 +97,17 @@ const WelcomeBanner = styled(motion.div)`
 // --- OVERVIEW SECTION ---
 const OverviewGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr; 
+  /* Updated to 2 columns: Wallet (smaller) and Income (larger) */
+  grid-template-columns: 1fr 2fr; 
   gap: 25px;
   margin-bottom: 40px;
 
-  @media (max-width: 1200px) { grid-template-columns: 1fr 1fr; }
-  @media (max-width: 768px) { grid-template-columns: 1fr; }
+  @media (max-width: 1024px) { grid-template-columns: 1fr; }
 `;
 
 const ChartWrapper = styled(motion.div)`
-  @media (max-width: 1200px) { grid-column: span 2; }
-  @media (max-width: 768px) { grid-column: span 1; }
+  /* Ensures chart looks good on all screens */
+  width: 100%;
 `;
 
 const SectionTitle = styled(motion.h3)`
@@ -135,8 +136,12 @@ const Overview = ({ user }) => (
     </motion.div>
 
     <OverviewGrid>
+      {/* 1. Wallet */}
       <motion.div variants={itemVariants}><Wallet /></motion.div>
-      <motion.div variants={itemVariants}><Withdraw /></motion.div>
+      
+      {/* 2. Withdraw REMOVED from here */}
+      
+      {/* 3. Income Chart */}
       <ChartWrapper variants={itemVariants}><Income /></ChartWrapper>
     </OverviewGrid>
 
@@ -162,7 +167,6 @@ export default function DashboardLayout() {
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
-        // Handle nested user object if it exists (e.g. res.data.user)
         const realUser = parsedData.user || parsedData;
         setUser(realUser);
       } catch (err) {
@@ -177,15 +181,13 @@ export default function DashboardLayout() {
 
     // A. IF USER IS ADMIN
     if (user.role === 'admin') {
-       // Force them to an Admin Tab if they aren't on one
        if (!activeTab.startsWith("admin-")) {
-         setActiveTab('admin-overview'); // Default to Admin Overview
+         setActiveTab('admin-overview'); 
          if (location.pathname !== '/admin') navigate('/admin');
        }
     } 
     // B. IF NORMAL USER
     else {
-       // If they try to go to Admin, kick them back to Dashboard
        if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
          setActiveTab('dashboard');
          navigate('/dashboard');
@@ -195,7 +197,6 @@ export default function DashboardLayout() {
 
   // 3. Handle Tab Switching
   const handleTabChange = (tabId) => {
-    // If clicking an admin tab, ensure we are on /admin route
     if (tabId.startsWith("admin-")) {
        if (location.pathname !== '/admin') navigate('/admin');
     } else {
@@ -214,9 +215,7 @@ export default function DashboardLayout() {
 
   const renderContent = () => {
     // 🛡️ ADMIN ROUTING LOGIC
-    // Checks if tab starts with "admin-" (e.g. "admin-requests")
     if (activeTab.startsWith("admin-")) {
-      // Passes the specific view ("requests") to the AdminPanel
       const view = activeTab.replace("admin-", ""); 
       return <AdminPanel initialView={view} />;
     }

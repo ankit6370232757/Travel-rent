@@ -287,7 +287,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
               <>
                 <SectionLabel>Main Menu</SectionLabel>
                 <MenuItem $active={activeTab === "dashboard"} onClick={() => handleNav("dashboard")}>
-                  <Home size={18} /> Overview
+                  <Home size={18} /> Dashboard
                 </MenuItem>
                 <MenuItem $active={activeTab === "wallet"} onClick={() => handleNav("wallet")}>
                   <Wallet size={18} /> My Wallet
