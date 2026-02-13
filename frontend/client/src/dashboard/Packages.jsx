@@ -218,7 +218,7 @@ export default function Packages() {
                    <div style={{ background: 'rgba(62, 166, 255, 0.1)', border: '1px solid rgba(62, 166, 255, 0.3)', padding: '15px', borderRadius: '12px', marginBottom: '20px', textAlign: 'center' }}>
                      <div style={{ color: '#3ea6ff', fontSize: '13px', fontWeight: 'bold', marginBottom: '10px' }}>⚡ IF YOU JOIN NOW:</div>
                      <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-                       <div><span style={{ fontSize: '11px', color: '#aaa' }}>BATCH</span><br/><strong style={{ fontSize: '16px' }}>#{info.batch}</strong></div>
+                       <div><span style={{ fontSize: '11px', color: '#aaa' }}>SLOT</span><br/><strong style={{ fontSize: '16px' }}>#{info.batch}</strong></div>
                        <div><span style={{ fontSize: '11px', color: '#aaa' }}>SEAT</span><br/><strong style={{ fontSize: '16px' }}>#{info.seat}</strong></div>
                        <div><span style={{ fontSize: '11px', color: '#2ecc71' }}>BONUS</span><br/><strong style={{ fontSize: '16px', color: '#2ecc71' }}>${info.bonus}</strong></div>
                      </div>
