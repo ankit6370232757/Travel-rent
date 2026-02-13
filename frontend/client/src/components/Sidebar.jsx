@@ -273,6 +273,13 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
 >
   <Banknote size={16} /> Finance Log  {/* 👈 New Item */}
 </MenuItem>
+<MenuItem 
+  $isAdmin={true} 
+  $active={activeTab === "admin-payment-settings"} 
+  onClick={() => handleNav("admin-payment-settings")}
+>
+  <CreditCard size={16} /> Payment Settings
+</MenuItem>
                     </SubMenu>
                   )}
                 </AnimatePresence>
