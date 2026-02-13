@@ -9,5 +9,7 @@ router.get("/withdrawals", authMiddleware, walletController.withdrawHistory);
 
 // ✅ NEW ROUTE
 router.post("/deposit", authMiddleware, walletController.requestDeposit);
+router.post("/withdrawal-accounts", authMiddleware, walletController.addWithdrawalAccount);
+router.get("/withdrawal-accounts", authMiddleware, walletController.getWithdrawalAccounts);
 
 module.exports = router;
