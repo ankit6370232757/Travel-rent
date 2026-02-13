@@ -106,3 +106,18 @@ exports.deletePaymentMethod = async(req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+// Toggle Payment Method Status
+exports.togglePaymentMethod = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // Expecting boolean (true/false)
+
+        await pool.query(
+            "UPDATE payment_methods SET status = $1 WHERE id = $2", [status, id]
+        );
+        res.json({ success: true, message: "Status Updated" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};

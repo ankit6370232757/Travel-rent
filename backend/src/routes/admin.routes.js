@@ -9,4 +9,5 @@ router.get("/users", authMiddleware, adminController.getAllUsers);
 router.post("/payment-methods", authMiddleware, adminController.addPaymentMethod);
 router.get("/payment-methods", authMiddleware, adminController.getPaymentMethods); // Public or Auth
 router.delete("/payment-methods/:id", authMiddleware, adminController.deletePaymentMethod);
+router.put("/payment-methods/:id/status", authMiddleware, adminController.togglePaymentMethod);
 module.exports = router;
