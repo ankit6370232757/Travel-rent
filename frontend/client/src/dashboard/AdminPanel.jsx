@@ -111,7 +111,7 @@ export default function AdminPanel({ initialView = "overview" }) {
     <Container>
       <Header>
         {/* Simple Header without Tabs */}
-        <Title><ShieldCheck size={32} color="#3ea6ff"/> Admin Console</Title>
+        <Title><ShieldCheck size={32} color="#3ea6ff"/> </Title>
       </Header>
 
       <AnimatePresence mode="wait">

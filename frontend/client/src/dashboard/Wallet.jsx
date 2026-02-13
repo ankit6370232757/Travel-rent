@@ -278,7 +278,7 @@ export default function Wallet() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <Input 
                 type="text" 
-                placeholder="Enter Transaction ID / UTR No." 
+                placeholder="Enter Transaction ID / Nonce No." 
                 value={txnId}
                 onChange={(e) => setTxnId(e.target.value)}
               />
