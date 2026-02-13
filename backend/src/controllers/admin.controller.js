@@ -121,3 +121,51 @@ exports.togglePaymentMethod = async(req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+// --- WITHDRAWAL METHODS MANAGEMENT ---
+
+// 1. Get All Withdrawal Methods (Admin & User)
+exports.getWithdrawalMethods = async(req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM withdrawal_methods ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 2. Add New Withdrawal Method
+exports.addWithdrawalMethod = async(req, res) => {
+    try {
+        const { methodName } = req.body;
+        if (!methodName) return res.status(400).json({ message: "Method Name Required" });
+
+        await pool.query("INSERT INTO withdrawal_methods (method_name) VALUES ($1)", [methodName]);
+        res.json({ success: true, message: "Method Added" });
+    } catch (err) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 3. Toggle Status (Active/Inactive)
+exports.toggleWithdrawalMethod = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        await pool.query("UPDATE withdrawal_methods SET status = $1 WHERE id = $2", [status, id]);
+        res.json({ success: true, message: "Status Updated" });
+    } catch (err) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 4. Delete Method
+exports.deleteWithdrawalMethod = async(req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query("DELETE FROM withdrawal_methods WHERE id = $1", [id]);
+        res.json({ success: true, message: "Method Deleted" });
+    } catch (err) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};

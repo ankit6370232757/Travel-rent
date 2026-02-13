@@ -10,4 +10,9 @@ router.post("/payment-methods", authMiddleware, adminController.addPaymentMethod
 router.get("/payment-methods", authMiddleware, adminController.getPaymentMethods); // Public or Auth
 router.delete("/payment-methods/:id", authMiddleware, adminController.deletePaymentMethod);
 router.put("/payment-methods/:id/status", authMiddleware, adminController.togglePaymentMethod);
+
+router.get("/withdrawal-methods", adminController.getWithdrawalMethods); // Public (for User & Admin)
+router.post("/withdrawal-methods", authMiddleware, adminController.addWithdrawalMethod);
+router.put("/withdrawal-methods/:id/status", authMiddleware, adminController.toggleWithdrawalMethod);
+router.delete("/withdrawal-methods/:id", authMiddleware, adminController.deleteWithdrawalMethod);
 module.exports = router;
