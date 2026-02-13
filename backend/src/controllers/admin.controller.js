@@ -72,10 +72,13 @@ exports.getAllUsers = async(req, res) => {
 };
 exports.addPaymentMethod = async(req, res) => {
     try {
-        const { methodName, details } = req.body;
+        // Now accepting qrCode from body
+        const { methodName, details, qrCode } = req.body;
+
         await pool.query(
-            "INSERT INTO payment_methods (method_name, details) VALUES ($1, $2)", [methodName, details]
+            "INSERT INTO payment_methods (method_name, details, qr_code) VALUES ($1, $2, $3)", [methodName, details, qrCode] // Save the Base64 string or URL
         );
+
         res.json({ success: true, message: "Payment Method Added" });
     } catch (err) {
         console.error(err);
