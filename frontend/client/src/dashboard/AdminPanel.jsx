@@ -13,6 +13,7 @@ import AdminSettings from "./admin/AdminSettings";
 import AdminPackages from "./admin/AdminPackages";
 import AdminFinance from "./admin/AdminFinance";
 import AdminPayments from "./admin/AdminPayments";
+import AdminWithdrawSettings from "./admin/AdminWithdrawSettings"; // 👈 NEW IMPORT
 
 // --- STYLED COMPONENTS ---
 const Container = styled.div`
@@ -134,6 +135,7 @@ export default function AdminPanel({ initialView = "overview" }) {
     <AdminFinance key="finance" />
 )}
 {activeTab === "payment-settings" && <AdminPayments />}
+{activeTab === "withdraw-settings" && <AdminWithdrawSettings />}
       </AnimatePresence>
     </Container>
   );

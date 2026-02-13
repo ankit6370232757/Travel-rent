@@ -5,7 +5,6 @@ import {
   Home, 
   Wallet, 
   Users, 
-  TrendingUp, 
   LogOut, 
   Box, 
   X,
@@ -20,7 +19,7 @@ import {
   ChevronRight,
   Sliders,
   Package,
-  Banknote // 👈 Imported Sliders icon for Settings
+  Banknote // 👈 Ensuring Banknote is imported
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -83,7 +82,7 @@ const Menu = styled.div`
   flex-direction: column;
   gap: 8px;
   flex: 1;
-  overflow-y: auto; /* Allow scrolling if menu is tall */
+  overflow-y: auto;
   &::-webkit-scrollbar { display: none; }
 `;
 
@@ -106,7 +105,6 @@ const MenuItem = styled(motion.div)`
   font-weight: 600;
   font-size: 14px;
   
-  /* 🎨 Dynamic Color based on Admin status */
   color: ${props => props.$active ? (props.$isAdmin ? "#e74c3c" : "#fff") : "#888"};
   
   background: ${props => props.$active ? (props.$isAdmin ? "rgba(231, 76, 60, 0.1)" : "linear-gradient(90deg, rgba(62, 166, 255, 0.15), rgba(62, 166, 255, 0.05))") : "transparent"};
@@ -251,7 +249,8 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                       >
                         <UserCheck size={16} /> User Manager
                       </MenuItem>
-                      {/* 👇 NEW SETTINGS MENU ITEM */}
+                      
+                      {/* 👇 SYSTEM SETTINGS */}
                       <MenuItem 
                         $isAdmin={true} 
                         $active={activeTab === "admin-settings"} 
@@ -259,27 +258,43 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                       >
                         <Sliders size={16} /> System Settings
                       </MenuItem>
+
+                      {/* 👇 MANAGE PLANS */}
                       <MenuItem 
-  $isAdmin={true} 
-  $active={activeTab === "admin-packages"} 
-  onClick={() => handleNav("admin-packages")}
->
-  <Package size={16} /> Manage Plans  {/* 👈 New Item */}
-</MenuItem>
-<MenuItem 
-  $isAdmin={true} 
-  $active={activeTab === "admin-finance"} 
-  onClick={() => handleNav("admin-finance")}
->
-  <Banknote size={16} /> Finance Log  {/* 👈 New Item */}
-</MenuItem>
-<MenuItem 
-  $isAdmin={true} 
-  $active={activeTab === "admin-payment-settings"} 
-  onClick={() => handleNav("admin-payment-settings")}
->
-  <CreditCard size={16} /> Payment Settings
-</MenuItem>
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-packages"} 
+                        onClick={() => handleNav("admin-packages")}
+                      >
+                        <Package size={16} /> Manage Plans
+                      </MenuItem>
+
+                      {/* 👇 FINANCE LOG */}
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-finance"} 
+                        onClick={() => handleNav("admin-finance")}
+                      >
+                        <Banknote size={16} /> Finance Log
+                      </MenuItem>
+
+                      {/* 👇 PAYMENT SETTINGS (DEPOSITS) */}
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-payment-settings"} 
+                        onClick={() => handleNav("admin-payment-settings")}
+                      >
+                        <CreditCard size={16} /> Payment Settings
+                      </MenuItem>
+
+                      {/* 👇 WITHDRAW OPTIONS (NEW) */}
+                      <MenuItem 
+                        $isAdmin={true} 
+                        $active={activeTab === "admin-withdraw-settings"} 
+                        onClick={() => handleNav("admin-withdraw-settings")}
+                      >
+                        <Banknote size={16} /> Withdraw Options
+                      </MenuItem>
+
                     </SubMenu>
                   )}
                 </AnimatePresence>
@@ -289,7 +304,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
               </>
             )}
 
-            {/* 👤 USER SECTION (For everyone, but Admins might not need it all) */}
+            {/* 👤 USER SECTION */}
             {!isAdmin && (
               <>
                 <SectionLabel>Main Menu</SectionLabel>
