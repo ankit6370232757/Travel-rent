@@ -70,3 +70,36 @@ exports.getAllUsers = async(req, res) => {
         res.status(500).json({ message: "Failed to fetch users" });
     }
 };
+exports.addPaymentMethod = async(req, res) => {
+    try {
+        const { methodName, details } = req.body;
+        await pool.query(
+            "INSERT INTO payment_methods (method_name, details) VALUES ($1, $2)", [methodName, details]
+        );
+        res.json({ success: true, message: "Payment Method Added" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 2. Get All Payment Methods (For Admin & User)
+exports.getPaymentMethods = async(req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM payment_methods WHERE status = true ORDER BY id DESC");
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 3. Delete Payment Method
+exports.deletePaymentMethod = async(req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query("DELETE FROM payment_methods WHERE id = $1", [id]);
+        res.json({ success: true, message: "Method Deleted" });
+    } catch (err) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};
