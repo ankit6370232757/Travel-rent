@@ -19,7 +19,7 @@ import {
   ChevronRight,
   Sliders,
   Package,
-  Banknote // 👈 Ensuring Banknote is imported
+  Banknote 
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -120,8 +120,10 @@ const MenuItem = styled(motion.div)`
   }
 `;
 
+// 👇 UPDATED: Added Max Height & Scroll for Admin Submenu Only
 const SubMenu = styled(motion.div)`
-  overflow: hidden;
+  overflow-y: auto; /* Enables scroll inside submenu */
+  max-height: 300px; /* Limits height so scrollbar appears */
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -129,6 +131,18 @@ const SubMenu = styled(motion.div)`
   border-left: 1px solid rgba(255,255,255,0.1);
   padding-left: 12px;
   margin-top: 5px;
+
+  /* Custom Scrollbar for Submenu */
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
 `;
 
 const UserSection = styled.div`
