@@ -106,7 +106,12 @@ exports.login = async(req, res) => {
     }
 };
 exports.getDashboardStats = async(req, res) => {
-    const userId = req.user.id;
+    // Ensure userId exists from middleware
+    const userId = req.user && req.user.id;
+
+    if (!userId) {
+        return res.status(401).json({ message: "Unauthorized: No user ID found" });
+    }
 
     try {
         // 1. Fetch the user's own Referral Code first
@@ -114,18 +119,17 @@ exports.getDashboardStats = async(req, res) => {
             "SELECT referral_code FROM users WHERE id = $1", [userId]
         );
 
-        // ✅ Alternative to Optional Chaining: Manual check to avoid syntax errors
         const myReferralCode = (userQuery.rows && userQuery.rows.length > 0) ?
             userQuery.rows[0].referral_code :
             null;
 
-        // 2. Run the 4 heavy queries in parallel
+        // 2. Run queries in parallel
         const [balanceRes, profitRes, plansRes, networkRes] = await Promise.all([
             // A. Total Balance (wallets table)
             pool.query("SELECT balance FROM wallets WHERE user_id = $1", [userId]),
 
             // B. Total Profit (income_logs table)
-            pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM income_logs WHERE user_id = $1", [userId]),
+            pool.query("SELECT SUM(amount) as total FROM income_logs WHERE user_id = $1", [userId]),
 
             // C. Active Plans (seats table)
             pool.query("SELECT COUNT(*) as count FROM seats WHERE user_id = $1 AND status = 'active'", [userId]),
@@ -136,24 +140,24 @@ exports.getDashboardStats = async(req, res) => {
             Promise.resolve({ rows: [{ count: 0 }] })
         ]);
 
-        // 3. Format results safely
-        const balance = (balanceRes.rows && balanceRes.rows.length > 0) ?
+        // 3. Format results with fallback to 0 to prevent "null" crashes
+        const balance = (balanceRes.rows[0] && balanceRes.rows[0].balance) ?
             Number(balanceRes.rows[0].balance) :
             0;
 
-        const totalEarnings = (profitRes.rows && profitRes.rows.length > 0) ?
+        const totalEarnings = (profitRes.rows[0] && profitRes.rows[0].total) ?
             Number(profitRes.rows[0].total) :
             0;
 
-        const activePlans = (plansRes.rows && plansRes.rows.length > 0) ?
+        const activePlans = (plansRes.rows[0] && plansRes.rows[0].count) ?
             Number(plansRes.rows[0].count) :
             0;
 
-        const totalReferrals = (networkRes.rows && networkRes.rows.length > 0) ?
+        const totalReferrals = (networkRes.rows[0] && networkRes.rows[0].count) ?
             Number(networkRes.rows[0].count) :
             0;
 
-        // 4. Send Response
+        // 4. Send clean JSON response
         res.json({
             balance,
             totalEarnings,
@@ -162,7 +166,10 @@ exports.getDashboardStats = async(req, res) => {
         });
 
     } catch (err) {
-        console.error("Dashboard Stats Error:", err);
-        res.status(500).json({ message: "Server Error" });
+        console.error("❌ Dashboard Stats Error:", err.message);
+        res.status(500).json({
+            message: "Internal Server Error",
+            error: err.message
+        });
     }
 };
