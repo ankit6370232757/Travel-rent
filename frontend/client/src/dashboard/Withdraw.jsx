@@ -43,7 +43,7 @@ const InputWrapper = styled.div` position: relative; margin-bottom: 25px; `;
 
 const Input = styled.input`
   width: 100%; padding: 18px 22px;
-  padding-left: ${props => props.hasIcon ? '50px' : '22px'};
+  padding-left: ${props => props.$hasIcon ? '50px' : '22px'};
   border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.4); color: white; outline: none;
   font-size: 16px; font-weight: 500; transition: all 0.2s;
@@ -130,13 +130,14 @@ export default function Withdraw() {
       const accRes = await api.get("/wallet/withdrawal-accounts");
       setAccounts(accRes.data);
 
-      // 3. Get Allowed Withdrawal Methods (Admin Defined)
-      // 👇 UPDATED ENDPOINT HERE
-      const methodRes = await api.get("/admin/withdrawal-methods"); 
+      // 3. Get Allowed Withdrawal Methods (NEW USER ROUTE)
+      // 👇 This now points to the User Route, not Admin
+      const methodRes = await api.get("/wallet/withdrawal-methods-list"); 
       setAdminMethods(methodRes.data);
 
     } catch (err) { 
       console.error("Data fetch error", err);
+      // Optional: Add toast error if needed
     }
   };
 
@@ -234,7 +235,7 @@ export default function Withdraw() {
             <InputWrapper>
               <DollarSign>$</DollarSign>
               <Input 
-                type="number" hasIcon
+                type="number" $hasIcon
                 placeholder="Enter Withdrawal Amount" 
                 value={amount} 
                 onChange={e => setAmount(e.target.value)} 

@@ -1,146 +1,220 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { motion, AnimatePresence } from "framer-motion";
-import { Package, Plus, Trash2, Edit3, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Trash2, Package, ToggleLeft, ToggleRight, DollarSign, Users, Calendar, Activity } from "lucide-react";
+import api from "../../api/axios";
 import toast from "react-hot-toast";
 
 // --- STYLED COMPONENTS ---
-const Container = styled(motion.div)`
-  display: flex; flex-direction: column; gap: 25px;
+const Container = styled.div`
+  color: #fff;
 `;
 
-const Header = styled.div`
-  display: flex; justify-content: space-between; align-items: center;
-  button {
-    background: #3ea6ff; color: #fff; border: none; padding: 10px 20px;
-    border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600;
-    &:hover { background: #2563eb; }
-  }
+const FormCard = styled.div`
+  background: rgba(30, 30, 30, 0.6); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px;
+  padding: 30px; margin-bottom: 40px;
 `;
 
-const Grid = styled.div`
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
+const GridForm = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
 `;
 
-const PlanCard = styled(motion.div)`
-  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px; padding: 25px; position: relative; overflow: hidden;
-  transition: transform 0.2s;
-  &:hover { transform: translateY(-5px); border-color: rgba(62, 166, 255, 0.3); }
-
-  h3 { margin: 0 0 5px 0; font-size: 20px; color: #fff; }
-  .price { font-size: 24px; font-weight: 800; color: #3ea6ff; margin-bottom: 15px; }
-  
-  .meta {
-    display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;
-    div { display: flex; justify-content: space-between; font-size: 13px; color: #888; }
-    strong { color: #ddd; }
-  }
-
-  .actions {
-    display: flex; gap: 10px; margin-top: auto;
-    button {
-      flex: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 5px;
-    }
-  }
-`;
-
-const ModalOverlay = styled(motion.div)`
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8); z-index: 200; display: flex; align-items: center; justify-content: center;
-`;
-
-const ModalContent = styled(motion.div)`
-  background: #121212; border: 1px solid rgba(255,255,255,0.1); padding: 30px;
-  border-radius: 24px; width: 400px; display: flex; flex-direction: column; gap: 15px;
-  
-  h2 { margin: 0 0 10px 0; color: #fff; }
+const InputGroup = styled.div`
+  display: flex; flex-direction: column; gap: 8px;
+  label { font-size: 12px; color: #aaa; text-transform: uppercase; font-weight: 700; }
   input {
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-    padding: 12px; border-radius: 10px; color: #fff; outline: none;
+    padding: 12px; background: rgba(0,0,0,0.3); 
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;
+    &:focus { border-color: #3ea6ff; outline: none; }
   }
-  .btns { display: flex; gap: 10px; margin-top: 10px; }
+`;
+
+const ActionButton = styled.button`
+  background: #3ea6ff; color: white; border: none; padding: 12px 25px; 
+  border-radius: 10px; cursor: pointer; font-weight: bold;
+  display: flex; align-items: center; gap: 8px;
+  &:hover { opacity: 0.9; }
+`;
+
+const PackagesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 25px;
+`;
+
+const PkgCard = styled.div`
+  background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+  border: 1px solid ${props => props.active ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255, 255, 255, 0.05)'};
+  border-radius: 16px; padding: 25px; position: relative; overflow: hidden;
+  opacity: ${props => props.active ? 1 : 0.6}; transition: 0.3s;
+
+  &:hover { border-color: #3ea6ff; opacity: 1; }
+`;
+
+const PkgHeader = styled.div`
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
+
+  h3 { margin: 0; font-size: 20px; color: #fff; }
+  span { font-size: 24px; font-weight: 800; color: #3ea6ff; }
+`;
+
+const StatRow = styled.div`
+  display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;
+  color: #ccc;
+  span.val { font-weight: 600; color: #fff; }
+`;
+
+const ToggleBtn = styled.button`
+  background: none; border: none; cursor: pointer; color: ${props => props.active ? '#2ecc71' : '#777'};
+  display: flex; align-items: center; gap: 5px; font-size: 13px;
+  &:hover { color: #fff; }
 `;
 
 export default function AdminPackages() {
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [plans, setPlans] = useState([
-    { id: 1, name: "Starter Plan", price: 500, roi: 5, duration: 10, total: 750, active: true },
-    { id: 2, name: "Pro Investor", price: 2000, roi: 6, duration: 15, total: 3800, active: true },
-  ]);
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const [newPlan, setNewPlan] = useState({ name: "", price: "", roi: "", duration: "" });
+  // Form State (Matches DB Columns)
+  const [form, setForm] = useState({
+    name: "",
+    total_seats: "",
+    ticket_price: "",
+    daily_income: "",
+    monthly_income: "",
+    yearly_income: "",
+    ots_income: ""
+  });
 
-  const handleAdd = () => {
-    if(!newPlan.name || !newPlan.price) return toast.error("Please fill details");
-    
-    const totalReturn = Number(newPlan.price) + (Number(newPlan.price) * (Number(newPlan.roi)/100) * Number(newPlan.duration));
-    
-    setPlans([...plans, { ...newPlan, id: Date.now(), total: totalReturn, active: true }]);
-    setModalOpen(false);
-    setNewPlan({ name: "", price: "", roi: "", duration: "" });
-    toast.success("New Package Created! 🚀");
+  useEffect(() => { fetchPackages(); }, []);
+
+  const fetchPackages = async () => {
+    try {
+      const res = await api.get("/admin/packages");
+      setPackages(res.data);
+    } catch (err) { console.error(err); }
   };
 
-  const handleDelete = (id) => {
-    if(window.confirm("Delete this package?")) {
-      setPlans(plans.filter(p => p.id !== id));
-      toast.success("Package Deleted");
-    }
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleAdd = async () => {
+    if(!form.name || !form.ticket_price) return toast.error("Name and Price are required");
+    
+    setLoading(true);
+    try {
+      await api.post("/admin/packages", form);
+      toast.success("Package Created Successfully!");
+      setForm({ name: "", total_seats: "", ticket_price: "", daily_income: "", monthly_income: "", yearly_income: "", ots_income: "" }); // Reset
+      fetchPackages();
+    } catch(err) {
+      toast.error("Failed to add package");
+    } finally { setLoading(false); }
+  };
+
+  const toggleStatus = async (pkg) => {
+    try {
+      // Toggle the boolean value
+      const newStatus = !pkg.is_active; 
+      await api.put(`/admin/packages/${pkg.id}/status`, { is_active: newStatus });
+      toast.success(`Package ${newStatus ? 'Activated' : 'Deactivated'}`);
+      fetchPackages();
+    } catch(err) { toast.error("Update failed"); }
+  };
+
+  const handleDelete = async (id) => {
+    if(!window.confirm("Delete this package permanently?")) return;
+    try {
+      await api.delete(`/admin/packages/${id}`);
+      toast.success("Deleted");
+      fetchPackages();
+    } catch(err) { toast.error("Failed"); }
   };
 
   return (
-    <Container initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <Header>
-        <h3 style={{color:'#fff', display:'flex', alignItems:'center', gap:10, margin:0}}>
-           <Package size={24} color="#3ea6ff"/> Investment Plans
-        </h3>
-        <button onClick={() => setModalOpen(true)}><Plus size={18}/> Create New</button>
-      </Header>
+    <Container>
+      <h2 style={{marginTop:0, display:'flex', alignItems:'center', gap:10}}>
+        <Package color="#3ea6ff"/> Package Manager
+      </h2>
 
-      <Grid>
-        {plans.map((plan) => (
-          <PlanCard key={plan.id} layout>
-            <div style={{display:'flex', justifyContent:'space-between'}}>
-              <h3>{plan.name}</h3>
-              {plan.active ? <CheckCircle size={16} color="#2ecc71"/> : <XCircle size={16} color="#e74c3c"/>}
-            </div>
-            <div className="price">${plan.price}</div>
-            
-            <div className="meta">
-              <div><span>Daily ROI:</span> <strong>{plan.roi}%</strong></div>
-              <div><span>Duration:</span> <strong>{plan.duration} Days</strong></div>
-              <div><span>Total Return:</span> <strong style={{color:'#2ecc71'}}>${plan.total}</strong></div>
-            </div>
+      {/* --- ADD PACKAGE FORM --- */}
+      <FormCard>
+        <h4 style={{margin:'0 0 20px 0', color:'#888'}}>Create New Investment Plan</h4>
+        <GridForm>
+          <InputGroup>
+            <label>Package Name</label>
+            <input name="name" placeholder="e.g. WATER" value={form.name} onChange={handleChange} />
+          </InputGroup>
+          <InputGroup>
+            <label>Price ($)</label>
+            <input name="ticket_price" type="number" placeholder="20.00" value={form.ticket_price} onChange={handleChange} />
+          </InputGroup>
+          <InputGroup>
+            <label>Total Seats</label>
+            <input name="total_seats" type="number" placeholder="180" value={form.total_seats} onChange={handleChange} />
+          </InputGroup>
+          <InputGroup>
+            <label>Daily Income</label>
+            <input name="daily_income" type="number" placeholder="0.04" value={form.daily_income} onChange={handleChange} />
+          </InputGroup>
+          <InputGroup>
+            <label>Monthly Income</label>
+            <input name="monthly_income" type="number" placeholder="1.50" value={form.monthly_income} onChange={handleChange} />
+          </InputGroup>
+          <InputGroup>
+            <label>Yearly Income</label>
+            <input name="yearly_income" type="number" placeholder="24.00" value={form.yearly_income} onChange={handleChange} />
+          </InputGroup>
+          <InputGroup>
+            <label>OTS Income</label>
+            <input name="ots_income" type="number" placeholder="24.00" value={form.ots_income} onChange={handleChange} />
+          </InputGroup>
+        </GridForm>
+        <ActionButton onClick={handleAdd} disabled={loading}>
+          {loading ? "Creating..." : <><Plus size={18}/> Create Package</>}
+        </ActionButton>
+      </FormCard>
 
-            <div className="actions">
-              <button style={{background:'rgba(255,255,255,0.05)', color:'#fff'}}><Edit3 size={14}/> Edit</button>
-              <button onClick={() => handleDelete(plan.id)} style={{background:'rgba(231,76,60,0.2)', color:'#e74c3c'}}><Trash2 size={14}/> Delete</button>
-            </div>
-          </PlanCard>
-        ))}
-      </Grid>
-
-      {/* CREATE MODAL */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <ModalOverlay initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setModalOpen(false)}>
-            <ModalContent onClick={e => e.stopPropagation()} initial={{scale:0.9}} animate={{scale:1}} exit={{scale:0.9}}>
-              <h2>Create Package</h2>
-              <input placeholder="Plan Name (e.g. Gold Plan)" value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} />
-              <input type="number" placeholder="Price ($)" value={newPlan.price} onChange={e => setNewPlan({...newPlan, price: e.target.value})} />
-              <input type="number" placeholder="Daily ROI (%)" value={newPlan.roi} onChange={e => setNewPlan({...newPlan, roi: e.target.value})} />
-              <input type="number" placeholder="Duration (Days)" value={newPlan.duration} onChange={e => setNewPlan({...newPlan, duration: e.target.value})} />
-              
-              <div className="btns">
-                <button onClick={handleAdd} style={{flex:1, padding:12, background:'#3ea6ff', border:'none', borderRadius:8, color:'white', fontWeight:'bold', cursor:'pointer'}}>Create</button>
-                <button onClick={() => setModalOpen(false)} style={{flex:1, padding:12, background:'transparent', border:'1px solid #333', borderRadius:8, color:'#888', cursor:'pointer'}}>Cancel</button>
+      {/* --- PACKAGE LIST --- */}
+      <PackagesGrid>
+        {packages.map(pkg => (
+          <PkgCard key={pkg.id} active={pkg.is_active}>
+            <PkgHeader>
+              <div>
+                <h3>{pkg.name}</h3>
+                <div style={{fontSize: 12, color: pkg.is_active ? '#2ecc71' : '#e74c3c', marginTop: 5}}>
+                   {pkg.is_active ? "● Active" : "● Inactive"}
+                </div>
               </div>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-      </AnimatePresence>
+              <span>${pkg.ticket_price}</span>
+            </PkgHeader>
+
+            <StatRow><span style={{display:'flex', gap:5, alignItems:'center'}}><Users size={14}/> Seats</span> <span className="val">{pkg.total_seats}</span></StatRow>
+            <StatRow><span style={{display:'flex', gap:5, alignItems:'center'}}><Activity size={14}/> Daily</span> <span className="val">${pkg.daily_income}</span></StatRow>
+            <StatRow><span style={{display:'flex', gap:5, alignItems:'center'}}><Calendar size={14}/> Monthly</span> <span className="val">${pkg.monthly_income}</span></StatRow>
+            <StatRow><span style={{display:'flex', gap:5, alignItems:'center'}}><DollarSign size={14}/> OTS</span> <span className="val">${pkg.ots_income}</span></StatRow>
+
+            <div style={{marginTop: 20, display:'flex', justifyContent:'space-between', borderTop:'1px solid rgba(255,255,255,0.1)', paddingTop: 15}}>
+              <ToggleBtn active={pkg.is_active} onClick={() => toggleStatus(pkg)}>
+                {pkg.is_active ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
+                {pkg.is_active ? "Disable" : "Enable"}
+              </ToggleBtn>
+              
+              <button 
+                onClick={() => handleDelete(pkg.id)}
+                style={{background:'rgba(231, 76, 60, 0.1)', color:'#e74c3c', border:'none', padding: '5px 10px', borderRadius: 6, cursor:'pointer'}}
+              >
+                <Trash2 size={16}/>
+              </button>
+            </div>
+          </PkgCard>
+        ))}
+      </PackagesGrid>
+
     </Container>
   );
 }
