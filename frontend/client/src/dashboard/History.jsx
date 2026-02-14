@@ -184,7 +184,7 @@ export default function History() {
         <h2><Clock size={24} color="#3ea6ff" /> Transaction History</h2>
         
         <FilterGroup>
-          {["ALL", "DEPOSIT", "WITHDRAW", "BOOKING", "MINING"].map((f) => (
+          {["ALL", "DEPOSIT", "WITHDRAW", "INVESTMENT", "EARNING"].map((f) => (
             <FilterBtn 
               key={f} 
               active={filter === f} 
