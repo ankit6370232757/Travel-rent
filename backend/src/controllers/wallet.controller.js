@@ -1,5 +1,5 @@
 const walletService = require("../services/wallet.service");
-
+const pool = require("../config/db");
 exports.getWallet = async(req, res) => {
     try {
         const wallet = await walletService.getWallet(req.user.id);
