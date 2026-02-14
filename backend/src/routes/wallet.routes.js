@@ -11,5 +11,6 @@ router.get("/withdrawals", authMiddleware, walletController.withdrawHistory);
 router.post("/deposit", authMiddleware, walletController.requestDeposit);
 router.post("/withdrawal-accounts", authMiddleware, walletController.addWithdrawalAccount);
 router.get("/withdrawal-accounts", authMiddleware, walletController.getWithdrawalAccounts);
+router.get("/withdrawal-methods-list", authMiddleware, walletController.getWithdrawalMethods);
 
 module.exports = router;

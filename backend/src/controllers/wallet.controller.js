@@ -69,3 +69,14 @@ exports.getWithdrawalAccounts = async(req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+// Get Allowed Withdrawal Methods (For Users)
+exports.getWithdrawalMethods = async(req, res) => {
+    try {
+        // Only fetch ACTIVE methods
+        const result = await pool.query("SELECT * FROM withdrawal_methods WHERE status = TRUE ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
