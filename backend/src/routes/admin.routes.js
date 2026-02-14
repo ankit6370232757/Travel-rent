@@ -15,4 +15,9 @@ router.get("/withdrawal-methods", adminController.getWithdrawalMethods); // Publ
 router.post("/withdrawal-methods", authMiddleware, adminController.addWithdrawalMethod);
 router.put("/withdrawal-methods/:id/status", authMiddleware, adminController.toggleWithdrawalMethod);
 router.delete("/withdrawal-methods/:id", authMiddleware, adminController.deleteWithdrawalMethod);
+
+router.get("/packages", adminController.getPackages);
+router.post("/packages", authMiddleware, adminController.addPackage);
+router.put("/packages/:id/status", authMiddleware, adminController.togglePackageStatus); // 👈 New Toggle Route
+router.delete("/packages/:id", authMiddleware, adminController.deletePackage);
 module.exports = router;

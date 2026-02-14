@@ -169,3 +169,65 @@ exports.deleteWithdrawalMethod = async(req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+// --- PACKAGE MANAGEMENT ---
+
+// 1. Get All Packages (Admin sees all, Users see only active)
+exports.getPackages = async(req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM packages ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 2. Add New Package (Matches your DB columns)
+exports.addPackage = async(req, res) => {
+    try {
+        const { name, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income } = req.body;
+
+        // Simple validation
+        if (!name || !ticket_price) {
+            return res.status(400).json({ message: "Name and Price are required" });
+        }
+
+        const query = `
+      INSERT INTO packages 
+      (name, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, is_active) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), TRUE) 
+      RETURNING *`;
+
+        const values = [name, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income];
+
+        const newPkg = await pool.query(query, values);
+        res.json(newPkg.rows[0]);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to add package" });
+    }
+};
+
+// 3. Toggle Package Status (Active/Inactive)
+exports.togglePackageStatus = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_active } = req.body; // Expecting boolean
+
+        await pool.query("UPDATE packages SET is_active = $1 WHERE id = $2", [is_active, id]);
+        res.json({ success: true, message: "Package status updated" });
+    } catch (err) {
+        res.status(500).json({ message: "Update failed" });
+    }
+};
+
+// 4. Delete Package
+exports.deletePackage = async(req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query("DELETE FROM packages WHERE id = $1", [id]);
+        res.json({ success: true, message: "Package deleted" });
+    } catch (err) {
+        res.status(500).json({ message: "Delete failed" });
+    }
+};
