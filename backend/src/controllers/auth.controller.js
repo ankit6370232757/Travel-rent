@@ -105,3 +105,64 @@ exports.login = async(req, res) => {
         res.status(500).json({ message: "Login failed" });
     }
 };
+exports.getDashboardStats = async(req, res) => {
+    const userId = req.user.id;
+
+    try {
+        // 1. Fetch the user's own Referral Code first
+        const userQuery = await pool.query(
+            "SELECT referral_code FROM users WHERE id = $1", [userId]
+        );
+
+        // ✅ Alternative to Optional Chaining: Manual check to avoid syntax errors
+        const myReferralCode = (userQuery.rows && userQuery.rows.length > 0) ?
+            userQuery.rows[0].referral_code :
+            null;
+
+        // 2. Run the 4 heavy queries in parallel
+        const [balanceRes, profitRes, plansRes, networkRes] = await Promise.all([
+            // A. Total Balance (wallets table)
+            pool.query("SELECT balance FROM wallets WHERE user_id = $1", [userId]),
+
+            // B. Total Profit (income_logs table)
+            pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM income_logs WHERE user_id = $1", [userId]),
+
+            // C. Active Plans (seats table)
+            pool.query("SELECT COUNT(*) as count FROM seats WHERE user_id = $1 AND status = 'active'", [userId]),
+
+            // D. Network Partners (users table)
+            myReferralCode ?
+            pool.query("SELECT COUNT(*) as count FROM users WHERE referred_by = $1", [myReferralCode]) :
+            Promise.resolve({ rows: [{ count: 0 }] })
+        ]);
+
+        // 3. Format results safely
+        const balance = (balanceRes.rows && balanceRes.rows.length > 0) ?
+            Number(balanceRes.rows[0].balance) :
+            0;
+
+        const totalEarnings = (profitRes.rows && profitRes.rows.length > 0) ?
+            Number(profitRes.rows[0].total) :
+            0;
+
+        const activePlans = (plansRes.rows && plansRes.rows.length > 0) ?
+            Number(plansRes.rows[0].count) :
+            0;
+
+        const totalReferrals = (networkRes.rows && networkRes.rows.length > 0) ?
+            Number(networkRes.rows[0].count) :
+            0;
+
+        // 4. Send Response
+        res.json({
+            balance,
+            totalEarnings,
+            activePlans,
+            totalReferrals
+        });
+
+    } catch (err) {
+        console.error("Dashboard Stats Error:", err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};

@@ -73,4 +73,6 @@ router.get("/profile", authMiddleware, async(req, res) => {
     }
 });
 
+router.get("/dashboard-stats", authMiddleware, userController.getDashboardStats);
+
 module.exports = router;
