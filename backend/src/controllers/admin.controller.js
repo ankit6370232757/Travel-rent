@@ -234,28 +234,60 @@ exports.deletePackage = async(req, res) => {
 exports.getAllRequests = async(req, res) => {
     try {
         const query = `
-            SELECT 
-                id, 
-                user_id, 
-                amount, 
-                'DEPOSIT' as type, 
-                status,          -- 👈 Ensure this is exactly 'status'
-                created_at as date 
-            FROM deposits
+            SELECT id, user_id, amount, 'DEPOSIT' as type, status, created_at as date FROM deposits
             UNION ALL
-            SELECT 
-                id, 
-                user_id, 
-                amount, 
-                'WITHDRAW' as type, 
-                status,          -- 👈 Ensure this is exactly 'status'
-                created_at as date 
-            FROM withdrawals
+            SELECT id, user_id, amount, 'WITHDRAW' as type, status, created_at as date FROM withdrawals
             ORDER BY date DESC
         `;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 2. Approve/Reject Request (Ensures standard status labels)
+exports.handleRequest = async(req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id, type, action } = req.body; // action = 'APPROVE' | 'REJECT'
+        await client.query("BEGIN");
+
+        if (type === 'DEPOSIT') {
+            const dep = await client.query("SELECT * FROM deposits WHERE id = $1 FOR UPDATE", [id]);
+            if (!dep.rows.length) throw new Error("Deposit not found");
+
+            if (action === 'APPROVE') {
+                await client.query("UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [dep.rows[0].amount, dep.rows[0].user_id]);
+                // Log for finance history
+                await client.query("INSERT INTO income_logs (user_id, amount, income_type) VALUES ($1, $2, 'DEPOSIT')", [dep.rows[0].user_id, dep.rows[0].amount]);
+            }
+            // Standardize status to APPROVED or REJECTED
+            const finalStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+            await client.query("UPDATE deposits SET status = $1 WHERE id = $2", [finalStatus, id]);
+
+        } else if (type === 'WITHDRAW') {
+            const wd = await client.query("SELECT * FROM withdrawals WHERE id = $1 FOR UPDATE", [id]);
+            if (!wd.rows.length) throw new Error("Withdrawal not found");
+
+            const finalStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+
+            if (action === 'REJECT') {
+                // Refund money if rejected
+                await client.query("UPDATE wallets SET balance = balance + $1, locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].amount, wd.rows[0].user_id]);
+            } else {
+                // If Approved, just clear the locked_balance
+                await client.query("UPDATE wallets SET locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].amount, wd.rows[0].user_id]);
+            }
+            await client.query("UPDATE withdrawals SET status = $1 WHERE id = $2", [finalStatus, id]);
+        }
+
+        await client.query("COMMIT");
+        res.json({ message: `Request ${action}ED` });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        res.status(500).json({ message: error.message });
+    } finally {
+        client.release();
     }
 };
