@@ -34,7 +34,7 @@ router.get("/my-history", authMiddleware, async(req, res) => {
       )
       UNION ALL
       (
-        -- 3. INCOME (Earnings)
+        -- 3. INCOME (Daily, Referral, etc.)
         SELECT 
           id, 
           amount::numeric, 
@@ -46,7 +46,7 @@ router.get("/my-history", authMiddleware, async(req, res) => {
       )
       UNION ALL
       (
-        -- 4. INVESTMENTS (Using 'booked_at' from seats and 'ticket_price' from packages)
+        -- 4. INVESTMENTS (Package Purchases)
         SELECT 
           s.id, 
           p.ticket_price::numeric as amount, 
@@ -58,7 +58,7 @@ router.get("/my-history", authMiddleware, async(req, res) => {
         WHERE s.user_id = $1
       )
       ORDER BY date DESC
-      LIMIT 50;
+      LIMIT 100; -- Increased limit for better history depth
     `;
 
         const result = await pool.query(query, [userId]);
