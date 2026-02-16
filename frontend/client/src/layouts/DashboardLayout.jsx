@@ -94,7 +94,6 @@ const WelcomeText = styled.div`
   p { font-size: 14px; color: #888; margin: 6px 0 0 0; }
 `;
 
-// ✨ 1. STATS GRID
 const StatsRow = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -137,7 +136,6 @@ const StatCard = styled(motion.div)`
   }
 `;
 
-// ✨ 2. BENTO GRID LAYOUT
 const DashboardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -157,7 +155,6 @@ const GridItem = styled(motion.div)`
   }
 `;
 
-// --- ANIMATION VARIANTS ---
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 50 } } };
 
@@ -170,11 +167,10 @@ const Overview = ({ user }) => {
     totalReferrals: 0
   });
 
-  // Fetch Real Data from API
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await api.get("/auth/dashboard-stats"); // Ensure this endpoint exists in backend
+        const res = await api.get("/auth/dashboard-stats"); 
         if(res.data) {
            setStats({
              balance: Number(res.data.balance) || 0,
@@ -185,7 +181,6 @@ const Overview = ({ user }) => {
         }
       } catch (error) {
         console.error("Using default stats (API Error or Dev Mode)");
-        // Fallback for UI testing if API fails
         setStats({ balance: 0, totalEarnings: 0, activePlans: 0, totalReferrals: 0 }); 
       }
     };
@@ -194,7 +189,6 @@ const Overview = ({ user }) => {
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible">
-      
       <WelcomeSection>
         <WelcomeText>
           <h1>Hello, {user?.name?.split(' ')[0] || "User"} 👋</h1>
@@ -202,7 +196,6 @@ const Overview = ({ user }) => {
         </WelcomeText>
       </WelcomeSection>
 
-      {/* 1. TOP STATS ROW */}
       <StatsRow>
          <StatCard variants={itemVariants}>
             <div className="icon-box"><DollarSign size={24}/></div>
@@ -237,26 +230,17 @@ const Overview = ({ user }) => {
          </StatCard>
       </StatsRow>
 
-      {/* 2. MAIN BENTO GRID */}
       <DashboardGrid>
-        
-        {/* Left: Compact Wallet */}
         <GridItem className="wallet-section" variants={itemVariants}>
            <Wallet /> 
         </GridItem>
-
-        {/* Right: Big Chart */}
         <GridItem className="chart-section" variants={itemVariants}>
            <Income />
         </GridItem>
-
-        {/* Bottom: Packages */}
         <GridItem className="packages-section" variants={itemVariants}>
            <Packages />
         </GridItem>
-
       </DashboardGrid>
-
     </motion.div>
   );
 };
@@ -278,6 +262,12 @@ export default function DashboardLayout() {
         const parsedData = JSON.parse(storedData);
         const realUser = parsedData.user || parsedData;
         setUser(realUser);
+
+        // 🛡️ INITIAL ROLE PROTECTION
+        // If user is admin and the default tab is dashboard, switch to admin overview
+        if (realUser.role === 'admin' && activeTab === "dashboard") {
+          setActiveTab("admin-overview");
+        }
       } catch (err) {
         console.error("Error parsing user data", err);
       }
@@ -289,8 +279,13 @@ export default function DashboardLayout() {
     if (!user || !user.email) return; 
 
     if (user.role === 'admin') {
+       // If an admin somehow lands on "dashboard", force them to "admin-overview"
+       if (activeTab === "dashboard") {
+         setActiveTab("admin-overview");
+         return;
+       }
        if (!activeTab.startsWith("admin-")) {
-         if (location.pathname !== '/admin') navigate('/admin');
+          if (location.pathname !== '/admin') navigate('/admin');
        }
     } else {
        if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
@@ -302,6 +297,12 @@ export default function DashboardLayout() {
 
   // 3. Handle Tab Switching
   const handleTabChange = (tabId) => {
+    // If admin clicks a user-only tab, prevent it (optional safety)
+    if (user.role === 'admin' && tabId === "dashboard") {
+      setActiveTab("admin-overview");
+      return;
+    }
+
     if (tabId.startsWith("admin-")) {
        if (location.pathname !== '/admin') navigate('/admin');
     } else {
@@ -327,7 +328,10 @@ export default function DashboardLayout() {
     }
 
     switch (activeTab) {
-      case "dashboard": return <Overview user={user} />;
+      case "dashboard": 
+        // 🛡️ Final check: Never render Overview for Admin
+        if (user.role === 'admin') return <AdminPanel initialView="overview" />;
+        return <Overview user={user} />;
       case "wallet":    return <Wallet />;
       case "withdraw":  return <Withdraw />;
       case "history":   return <History />; 
@@ -335,7 +339,9 @@ export default function DashboardLayout() {
       case "network":   return <Referrals />;
       case "earnings":  return <Income />;
       case "packages":  return <Packages />;
-      default:          return <Overview user={user} />;
+      default:          
+        if (user.role === 'admin') return <AdminPanel initialView="overview" />;
+        return <Overview user={user} />;
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -11,12 +11,9 @@ import {
   CreditCard,
   History as HistoryIcon,
   Settings as SettingsIcon,
-  ShieldAlert, 
   BarChart2, 
   FileText, 
   UserCheck, 
-  ChevronDown, 
-  ChevronRight,
   Sliders,
   Package,
   Banknote 
@@ -27,7 +24,6 @@ import {
 const Container = styled(motion.div)`
   width: 280px;
   height: 100vh;
-  /* ✨ Glassmorphism Background */
   background: rgba(15, 15, 20, 0.85);
   backdrop-filter: blur(25px);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -124,19 +120,16 @@ const MenuItem = styled(motion.div)`
   position: relative;
   overflow: hidden;
 
-  /* Text Color Logic */
   color: ${props => props.$active 
     ? (props.$isAdmin ? "#ff6b6b" : "#fff") 
     : "#9ca3af"};
 
-  /* Active Background Logic */
   background: ${props => props.$active 
     ? (props.$isAdmin 
         ? "linear-gradient(90deg, rgba(255, 107, 107, 0.1) 0%, transparent 100%)" 
         : "linear-gradient(90deg, rgba(62, 166, 255, 0.1) 0%, transparent 100%)")
     : "transparent"};
 
-  /* ✨ Active Left Border Accent */
   border-left: 3px solid ${props => props.$active 
     ? (props.$isAdmin ? "#ff6b6b" : "#3ea6ff") 
     : "transparent"};
@@ -144,23 +137,8 @@ const MenuItem = styled(motion.div)`
   &:hover {
     background: rgba(255, 255, 255, 0.03);
     color: #fff;
-    padding-left: 20px; /* Slide effect */
+    padding-left: 20px;
   }
-`;
-
-const SubMenu = styled(motion.div)`
-  overflow-y: auto;
-  max-height: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-left: 18px;
-  border-left: 1px solid rgba(255,255,255,0.05);
-  padding-left: 10px;
-  margin-top: 5px;
-
-  &::-webkit-scrollbar { width: 2px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
 `;
 
 const UserSection = styled.div`
@@ -175,7 +153,6 @@ const UserCard = styled.div`
   align-items: center;
   gap: 12px;
   padding: 14px;
-  /* ✨ Floating Glass Card */
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
@@ -220,7 +197,6 @@ const UserMeta = styled.div`
 `;
 
 export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose }) {
-  const [adminExpanded, setAdminExpanded] = useState(true);
   const isAdmin = user && user.role === 'admin';
 
   const handleNav = (id) => {
@@ -243,110 +219,77 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
           </Header>
 
           <Menu>
-            {/* 🛡️ ADMIN SECTION (Only for Admins) */}
-            {isAdmin && (
+            {/* 🛡️ ADMIN SECTION (Flattened - No Dropdown) */}
+            {isAdmin ? (
               <>
                 <SectionLabel style={{ color: '#ff6b6b' }}>Administration</SectionLabel>
                 
-                {/* Collapsible Header */}
                 <MenuItem 
                   $isAdmin={true} 
-                  $active={false} 
-                  onClick={() => setAdminExpanded(!adminExpanded)} 
-                  style={{justifyContent: 'space-between'}}
+                  $active={activeTab === "admin-overview"} 
+                  onClick={() => handleNav("admin-overview")}
                 >
-                  <div style={{display:'flex', gap:12, alignItems:'center'}}>
-                    <ShieldAlert size={18}/> Admin Console
-                  </div>
-                  {adminExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                  <BarChart2 size={18} /> Admin Dashboard
                 </MenuItem>
 
-                {/* Dropdown Items */}
-                <AnimatePresence>
-                  {adminExpanded && (
-                    <SubMenu 
-                      initial={{ height: 0, opacity: 0 }} 
-                      animate={{ height: 'auto', opacity: 1 }} 
-                      exit={{ height: 0, opacity: 0 }}
-                    >
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-overview"} 
-                        onClick={() => handleNav("admin-overview")}
-                      >
-                        <BarChart2 size={16} /> Dashboard
-                      </MenuItem>
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-requests"} 
-                        onClick={() => handleNav("admin-requests")}
-                      >
-                        <FileText size={16} /> Requests
-                      </MenuItem>
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-users"} 
-                        onClick={() => handleNav("admin-users")}
-                      >
-                        <UserCheck size={16} /> User Manager
-                      </MenuItem>
-                      
-                      {/* 👇 SYSTEM SETTINGS */}
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-settings"} 
-                        onClick={() => handleNav("admin-settings")}
-                      >
-                        <Sliders size={16} /> System Settings
-                      </MenuItem>
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-requests"} 
+                  onClick={() => handleNav("admin-requests")}
+                >
+                  <FileText size={18} /> Requests
+                </MenuItem>
 
-                      {/* 👇 MANAGE PLANS */}
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-packages"} 
-                        onClick={() => handleNav("admin-packages")}
-                      >
-                        <Package size={16} /> Manage Plans
-                      </MenuItem>
-
-                      {/* 👇 FINANCE LOG */}
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-finance"} 
-                        onClick={() => handleNav("admin-finance")}
-                      >
-                        <Banknote size={16} /> Finance Log
-                      </MenuItem>
-
-                      {/* 👇 PAYMENT SETTINGS (DEPOSITS) */}
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-payment-settings"} 
-                        onClick={() => handleNav("admin-payment-settings")}
-                      >
-                        <CreditCard size={16} /> Payment Settings
-                      </MenuItem>
-
-                      {/* 👇 WITHDRAW OPTIONS (NEW) */}
-                      <MenuItem 
-                        $isAdmin={true} 
-                        $active={activeTab === "admin-withdraw-settings"} 
-                        onClick={() => handleNav("admin-withdraw-settings")}
-                      >
-                        <Banknote size={16} /> Withdraw Options
-                      </MenuItem>
-
-                    </SubMenu>
-                  )}
-                </AnimatePresence>
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-users"} 
+                  onClick={() => handleNav("admin-users")}
+                >
+                  <UserCheck size={18} /> User Manager
+                </MenuItem>
                 
-                {/* Divider for Admins */}
-                <div style={{height: 1, background: 'rgba(255,255,255,0.05)', margin: '20px 0', flexShrink: 0}} />
-              </>
-            )}
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-settings"} 
+                  onClick={() => handleNav("admin-settings")}
+                >
+                  <Sliders size={18} /> System Settings
+                </MenuItem>
 
-            {/* 👤 USER SECTION */}
-            {!isAdmin && (
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-packages"} 
+                  onClick={() => handleNav("admin-packages")}
+                >
+                  <Package size={18} /> Manage Plans
+                </MenuItem>
+
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-finance"} 
+                  onClick={() => handleNav("admin-finance")}
+                >
+                  <Banknote size={18} /> Finance Log
+                </MenuItem>
+
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-payment-settings"} 
+                  onClick={() => handleNav("admin-payment-settings")}
+                >
+                  <CreditCard size={18} /> Payment Settings
+                </MenuItem>
+
+                <MenuItem 
+                  $isAdmin={true} 
+                  $active={activeTab === "admin-withdraw-settings"} 
+                  onClick={() => handleNav("admin-withdraw-settings")}
+                >
+                  <Banknote size={18} /> Withdraw Options
+                </MenuItem>
+              </>
+            ) : (
+              /* 👤 USER SECTION (Only visible to regular users) */
               <>
                 <SectionLabel>Main Menu</SectionLabel>
                 <MenuItem $active={activeTab === "dashboard"} onClick={() => handleNav("dashboard")}>

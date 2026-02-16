@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -13,7 +13,7 @@ import AdminSettings from "./admin/AdminSettings";
 import AdminPackages from "./admin/AdminPackages";
 import AdminFinance from "./admin/AdminFinance";
 import AdminPayments from "./admin/AdminPayments";
-import AdminWithdrawSettings from "./admin/AdminWithdrawSettings"; // 👈 NEW IMPORT
+import AdminWithdrawSettings from "./admin/AdminWithdrawSettings";
 
 // --- STYLED COMPONENTS ---
 const Container = styled.div`
@@ -36,11 +36,11 @@ const Title = styled.h2`
   color: #fff; 
   display: flex; 
   align-items: center; 
-  gap: 10px; 
+  gap: 12px; 
   margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 `;
-
-// ⚡ REMOVED TAB STYLES & CONTAINER ⚡
 
 export default function AdminPanel({ initialView = "overview" }) {
   const [activeTab, setActiveTab] = useState(initialView);
@@ -52,7 +52,7 @@ export default function AdminPanel({ initialView = "overview" }) {
   const [users, setUsers] = useState([]); 
   const [stats, setStats] = useState({ revenue: 0, users: 0, pending: 0 });
 
-  // ⚡ SYNC EFFECT: Updates tab when Sidebar is clicked
+  // ⚡ SYNC EFFECT: Matches the ID sent by Sidebar handleNav
   useEffect(() => {
     setActiveTab(initialView);
   }, [initialView]);
@@ -60,7 +60,6 @@ export default function AdminPanel({ initialView = "overview" }) {
   // 1. FETCH DATA
   const fetchData = async () => {
     try {
-      // You can optimize this later to only fetch data relevant to the active tab
       const [reqRes, bookRes, userRes] = await Promise.all([
         api.get("/admin/requests"),
         api.get("/booking/all"),
@@ -82,60 +81,68 @@ export default function AdminPanel({ initialView = "overview" }) {
       setLoading(false);
     } catch (err) {
       console.error("Admin fetch error", err);
-      // toast.error("Failed to load dashboard data"); // Optional: suppress error on initial load
       setLoading(false);
     }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  // 2. HANDLE ACTIONS (Passed to Requests Module)
+  // 2. HANDLE ACTIONS
   const handleAction = async (id, type, action) => {
     const loadingToast = toast.loading(`Processing ${action}...`);
     try {
       await api.post("/admin/handle", { id, type, action });
       toast.success(`Request ${action}ED!`, { id: loadingToast });
-      
-      // Remove from local state immediately for speed
       setRequests(prev => prev.filter(req => req.id !== id));
-      
-      // Refresh background data
       fetchData(); 
     } catch (err) {
       toast.error(err.response?.data?.message || "Action failed", { id: loadingToast });
     }
   };
 
-  if (loading) return <div style={{padding:50, textAlign:'center', color:'#888'}}>Loading Admin Panel...</div>;
+  if (loading) return <div style={{padding:50, textAlign:'center', color:'#888'}}>Loading Admin Console...</div>;
+
+  // Header Title Logic based on activeTab
+  const getHeaderTitle = () => {
+    switch(activeTab) {
+      case "overview": return "Admin Dashboard";
+      case "requests": return "System Requests";
+      case "users": return "User Management";
+      case "settings": return "System Settings";
+      case "packages": return "Manage Investment Plans";
+      case "finance": return "Finance Logs";
+      case "payment-settings": return "Deposit Methods";
+      case "withdraw-settings": return "Withdrawal Methods";
+      default: return "Admin Console";
+    }
+  };
 
   return (
     <Container>
       <Header>
-        {/* Simple Header without Tabs */}
-        <Title><ShieldCheck size={32} color="#3ea6ff"/> </Title>
+        <Title>
+          <ShieldCheck size={32} color="#3ea6ff"/> 
+          {getHeaderTitle()}
+        </Title>
       </Header>
 
       <AnimatePresence mode="wait">
-        {activeTab === "overview" && (
-           <AdminOverview key="overview" stats={stats} bookings={bookings} />
-        )}
-        {activeTab === "requests" && (
-           <AdminRequests key="requests" requests={requests} onHandleAction={handleAction} />
-        )}
-        {activeTab === "users" && (
-           <AdminUsers key="users" users={users} />
-        )}
-        {activeTab === "settings" && (
-           <AdminSettings key="settings" />
-        )}
-        {activeTab === "packages" && (
-    <AdminPackages key="packages" />
-)}
-{activeTab === "finance" && (
-    <AdminFinance key="finance" />
-)}
-{activeTab === "payment-settings" && <AdminPayments />}
-{activeTab === "withdraw-settings" && <AdminWithdrawSettings />}
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === "overview" && <AdminOverview stats={stats} bookings={bookings} />}
+          {activeTab === "requests" && <AdminRequests requests={requests} onHandleAction={handleAction} />}
+          {activeTab === "users" && <AdminUsers users={users} />}
+          {activeTab === "settings" && <AdminSettings />}
+          {activeTab === "packages" && <AdminPackages />}
+          {activeTab === "finance" && <AdminFinance />}
+          {activeTab === "payment-settings" && <AdminPayments />}
+          {activeTab === "withdraw-settings" && <AdminWithdrawSettings />}
+        </motion.div>
       </AnimatePresence>
     </Container>
   );
