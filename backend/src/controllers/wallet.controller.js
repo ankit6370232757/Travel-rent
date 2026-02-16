@@ -22,10 +22,26 @@ exports.requestDeposit = async(req, res) => {
 
 exports.withdraw = async(req, res) => {
     try {
-        const { amount } = req.body;
-        const result = await walletService.withdraw(req.user.id, amount);
-        res.json(result);
+        const { amount, methodName, address } = req.body;
+        const userId = req.user.id;
+
+        // 1. Basic Validation
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ message: "Invalid withdrawal amount" });
+        }
+
+        // 2. Call your service to handle the logic
+        // Ensure your service checks the 'wallets' table for sufficient balance
+        // and inserts into the 'withdrawals' table with a 'PENDING' status
+        const result = await walletService.withdraw(userId, amount, methodName, address);
+
+        res.json({
+            success: true,
+            message: "Withdrawal request submitted for approval!",
+            data: result
+        });
     } catch (err) {
+        console.error("Withdraw Error:", err.message);
         res.status(400).json({ message: err.message });
     }
 };
