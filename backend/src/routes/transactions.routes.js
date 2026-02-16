@@ -11,54 +11,31 @@ router.get("/my-history", authMiddleware, async(req, res) => {
         const query = `
       (
         -- 1. DEPOSITS
-        SELECT 
-          id, 
-          amount::numeric, 
-          'DEPOSIT'::text as type, 
-          status::text, 
-          created_at as date 
-        FROM deposits 
-        WHERE user_id = $1
+        SELECT id, amount::numeric, 'DEPOSIT'::text as type, status::text, created_at as date 
+        FROM deposits WHERE user_id = $1
       )
       UNION ALL
       (
-        -- 2. WITHDRAWALS
-        SELECT 
-          id, 
-          amount::numeric, 
-          'WITHDRAWAL'::text as type, 
-          status::text, 
-          created_at as date 
-        FROM withdrawals 
-        WHERE user_id = $1
+        -- 2. ACTUAL WITHDRAWALS
+        SELECT id, amount::numeric, 'WITHDRAWAL'::text as type, status::text, created_at as date 
+        FROM withdrawals WHERE user_id = $1
       )
       UNION ALL
       (
-        -- 3. INCOME (Daily, Referral, etc.)
-        SELECT 
-          id, 
-          amount::numeric, 
-          income_type::text as type, 
-          'CREDITED'::text as status, 
-          created_at as date 
-        FROM income_logs 
-        WHERE user_id = $1
+        -- 3. EARNINGS (Income Logs)
+        SELECT id, amount::numeric, 'EARNING'::text as type, 'CREDITED'::text as status, created_at as date 
+        FROM income_logs WHERE user_id = $1
       )
       UNION ALL
       (
         -- 4. INVESTMENTS (Package Purchases)
-        SELECT 
-          s.id, 
-          p.ticket_price::numeric as amount, 
-          'INVESTMENT'::text as type, 
-          'CONFIRMED'::text as status, 
-          s.booked_at as date 
-        FROM seats s
-        JOIN packages p ON s.package_id = p.id
+        -- This label triggers the blue 'Investment' UI badge
+        SELECT s.id, p.ticket_price::numeric as amount, 'INVESTMENT'::text as type, 'CONFIRMED'::text as status, s.booked_at as date 
+        FROM seats s 
+        JOIN packages p ON s.package_id = p.id 
         WHERE s.user_id = $1
       )
-      ORDER BY date DESC
-      LIMIT 100; -- Increased limit for better history depth
+      ORDER BY date DESC LIMIT 100;
     `;
 
         const result = await pool.query(query, [userId]);
