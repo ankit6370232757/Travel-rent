@@ -23,12 +23,14 @@ import {
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
+
 const Container = styled(motion.div)`
   width: 280px;
   height: 100vh;
-  background: rgba(18, 18, 18, 0.95);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  /* ✨ Glassmorphism Background */
+  background: rgba(15, 15, 20, 0.85);
+  backdrop-filter: blur(25px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   padding: 24px;
@@ -36,7 +38,7 @@ const Container = styled(motion.div)`
   left: 0;
   top: 0;
   z-index: 100;
-  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
 
   @media (max-width: 768px) {
     width: 100%; 
@@ -48,18 +50,21 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  padding-left: 10px;
+  flex-shrink: 0;
 `;
 
 const Logo = styled.h1`
   color: #fff;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
+  text-shadow: 0 0 20px rgba(62, 166, 255, 0.3);
 
   span {
     color: #3ea6ff;
@@ -70,6 +75,7 @@ const CloseButton = styled.div`
   cursor: pointer;
   color: #888;
   display: none;
+  transition: 0.2s;
   &:hover { color: #fff; }
   
   @media (max-width: 768px) {
@@ -80,98 +86,119 @@ const CloseButton = styled.div`
 const Menu = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   overflow-y: auto;
-  &::-webkit-scrollbar { display: none; }
+  min-height: 0;
+  padding-right: 5px;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
 `;
 
 const SectionLabel = styled.div`
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  color: #555;
+  color: #666;
   text-transform: uppercase;
-  margin: 20px 0 10px 12px;
-  letter-spacing: 1px;
+  margin: 25px 0 10px 16px;
+  letter-spacing: 1.2px;
+  flex-shrink: 0;
 `;
 
 const MenuItem = styled(motion.div)`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 12px 16px;
   border-radius: 12px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
-  
-  color: ${props => props.$active ? (props.$isAdmin ? "#e74c3c" : "#fff") : "#888"};
-  
-  background: ${props => props.$active ? (props.$isAdmin ? "rgba(231, 76, 60, 0.1)" : "linear-gradient(90deg, rgba(62, 166, 255, 0.15), rgba(62, 166, 255, 0.05))") : "transparent"};
-  
-  border: 1px solid ${props => props.$active ? (props.$isAdmin ? "rgba(231, 76, 60, 0.2)" : "rgba(62, 166, 255, 0.2)") : "transparent"};
-
+  flex-shrink: 0;
+  transition: all 0.3s ease;
   position: relative;
-  transition: all 0.2s;
+  overflow: hidden;
+
+  /* Text Color Logic */
+  color: ${props => props.$active 
+    ? (props.$isAdmin ? "#ff6b6b" : "#fff") 
+    : "#9ca3af"};
+
+  /* Active Background Logic */
+  background: ${props => props.$active 
+    ? (props.$isAdmin 
+        ? "linear-gradient(90deg, rgba(255, 107, 107, 0.1) 0%, transparent 100%)" 
+        : "linear-gradient(90deg, rgba(62, 166, 255, 0.1) 0%, transparent 100%)")
+    : "transparent"};
+
+  /* ✨ Active Left Border Accent */
+  border-left: 3px solid ${props => props.$active 
+    ? (props.$isAdmin ? "#ff6b6b" : "#3ea6ff") 
+    : "transparent"};
 
   &:hover {
-    color: ${props => props.$isAdmin ? "#e74c3c" : "#fff"};
-    background: ${props => props.$isAdmin ? "rgba(231, 76, 60, 0.05)" : "rgba(255, 255, 255, 0.03)"};
+    background: rgba(255, 255, 255, 0.03);
+    color: #fff;
+    padding-left: 20px; /* Slide effect */
   }
 `;
 
-// 👇 UPDATED: Added Max Height & Scroll for Admin Submenu Only
 const SubMenu = styled(motion.div)`
-  overflow-y: auto; /* Enables scroll inside submenu */
-  max-height: 300px; /* Limits height so scrollbar appears */
+  overflow-y: auto;
+  max-height: 300px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-left: 12px;
-  border-left: 1px solid rgba(255,255,255,0.1);
-  padding-left: 12px;
+  gap: 2px;
+  margin-left: 18px;
+  border-left: 1px solid rgba(255,255,255,0.05);
+  padding-left: 10px;
   margin-top: 5px;
 
-  /* Custom Scrollbar for Submenu */
-  &::-webkit-scrollbar {
-    width: 3px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-  }
+  &::-webkit-scrollbar { width: 2px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
 `;
 
 const UserSection = styled.div`
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 20px;
   padding-top: 20px;
-  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 `;
 
 const UserCard = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 14px;
+  /* ✨ Floating Glass Card */
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 `;
 
 const UserAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #3ea6ff, #8e2de2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: 700;
   color: white;
-  font-size: 18px;
+  font-size: 16px;
+  box-shadow: 0 4px 10px rgba(62, 166, 255, 0.3);
 `;
 
 const UserMeta = styled.div`
@@ -187,7 +214,7 @@ const UserMeta = styled.div`
     text-overflow: ellipsis;
   }
   span {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
   }
 `;
@@ -219,7 +246,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
             {/* 🛡️ ADMIN SECTION (Only for Admins) */}
             {isAdmin && (
               <>
-                <SectionLabel style={{ color: '#e74c3c' }}>Administration</SectionLabel>
+                <SectionLabel style={{ color: '#ff6b6b' }}>Administration</SectionLabel>
                 
                 {/* Collapsible Header */}
                 <MenuItem 
@@ -314,7 +341,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                 </AnimatePresence>
                 
                 {/* Divider for Admins */}
-                <div style={{height: 1, background: 'rgba(255,255,255,0.1)', margin: '20px 0'}} />
+                <div style={{height: 1, background: 'rgba(255,255,255,0.05)', margin: '20px 0', flexShrink: 0}} />
               </>
             )}
 
@@ -348,7 +375,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
           </Menu>
 
           <UserSection>
-            <MenuItem onClick={onLogout} style={{ marginBottom: 10, color: '#ff5c5c' }}>
+            <MenuItem onClick={onLogout} style={{ marginBottom: 10, color: '#ff6b6b' }}>
               <LogOut size={20} />
               Logout
             </MenuItem>
@@ -358,7 +385,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
               <UserMeta>
                 <strong>{user?.name || "User"}</strong>
                 <span>{user?.email}</span>
-                {isAdmin && <span style={{color: '#e74c3c', fontSize: '10px', fontWeight: 'bold', marginTop: 4}}>ADMIN ACCESS</span>}
+                {isAdmin && <span style={{color: '#ff6b6b', fontSize: '10px', fontWeight: 'bold', marginTop: 4}}>ADMIN ACCESS</span>}
               </UserMeta>
             </UserCard>
           </UserSection>

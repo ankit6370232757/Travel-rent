@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Users, Network, User, Hash, Layers, 
   BarChart2, IdCard, Share2 
@@ -10,9 +10,9 @@ import api from "../api/axios";
 // --- STYLED COMPONENTS ---
 
 const Card = styled(motion.div)`
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  background: linear-gradient(145deg, rgba(20, 20, 25, 0.6) 0%, rgba(20, 20, 25, 0.4) 100%);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
   padding: 30px;
   min-height: 400px;
@@ -20,6 +20,10 @@ const Card = styled(motion.div)`
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    padding: 20px;
+  }
 `;
 
 const Header = styled.div`
@@ -28,7 +32,7 @@ const Header = styled.div`
   align-items: center;
   margin-bottom: 25px;
   padding-bottom: 15px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 `;
 
 const TitleGroup = styled.div`
@@ -38,10 +42,10 @@ const TitleGroup = styled.div`
 `;
 
 const IconBox = styled.div`
-  background: rgba(46, 204, 113, 0.15);
+  background: rgba(62, 166, 255, 0.15);
   padding: 10px;
   border-radius: 12px;
-  color: #2ecc71;
+  color: #3ea6ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,22 +55,23 @@ const Title = styled.h3`
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: ${({ theme }) => theme.text || "#fff"};
+  color: #fff;
 `;
 
 const Subtitle = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.textSoft || "#aaa"};
+  color: #888;
+  margin-top: 4px;
 `;
 
 const Badge = styled.div`
-  background: rgba(62, 166, 255, 0.2);
-  color: #3ea6ff;
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
-  border: 1px solid rgba(62, 166, 255, 0.3);
+  border: 1px solid rgba(46, 204, 113, 0.2);
 `;
 
 const TableContainer = styled.div`
@@ -80,26 +85,26 @@ const TableContainer = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  min-width: 600px; /* Ensures table doesn't squish on mobile */
+  min-width: 700px;
 `;
 
 const Thead = styled.thead`
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
   
   th {
-    padding: 16px;
+    padding: 18px 24px;
     text-align: left;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     color: #888;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     
     div {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
   }
 `;
@@ -109,7 +114,7 @@ const Tr = styled(motion.tr)`
   transition: background 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.04);
   }
 
   &:last-child {
@@ -117,25 +122,26 @@ const Tr = styled(motion.tr)`
   }
 
   td {
-    padding: 14px 16px;
-    font-size: 13px;
-    color: #ddd;
+    padding: 20px 24px;
+    font-size: 14px;
+    color: #e0e0e0;
     vertical-align: middle;
   }
 `;
 
 const Avatar = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #3ea6ff 0%, #2d55ff 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-  margin-right: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  margin-right: 14px;
+  box-shadow: 0 4px 10px rgba(62, 166, 255, 0.3);
 `;
 
 const NameCell = styled.div`
@@ -146,42 +152,47 @@ const NameCell = styled.div`
     display: flex;
     flex-direction: column;
     
-    strong { color: #fff; font-weight: 500; }
-    small { font-size: 11px; color: #666; }
+    strong { color: #fff; font-weight: 600; font-size: 14px; }
+    small { font-size: 12px; color: #777; margin-top: 2px; }
   }
 `;
 
 const LevelBadge = styled.span`
   background: ${props => props.level === 1 ? 'rgba(46, 204, 113, 0.15)' : 'rgba(241, 196, 15, 0.15)'};
   color: ${props => props.level === 1 ? '#2ecc71' : '#f1c40f'};
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
+  border: 1px solid ${props => props.level === 1 ? 'rgba(46, 204, 113, 0.2)' : 'rgba(241, 196, 15, 0.2)'};
 `;
 
 const UserIdTag = styled.span`
   font-family: 'Courier New', monospace;
   background: rgba(255, 255, 255, 0.05);
-  padding: 4px 8px;
-  border-radius: 4px;
-  color: #aaa;
-  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 `;
 
 const EmptyState = styled.div`
-  padding: 40px;
+  padding: 60px;
   text-align: center;
   color: #666;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
+  
+  span { font-size: 14px; color: #888; }
 `;
 
 // --- MAIN COMPONENT ---
 
-export default function MyNetwork() {
+export default function Referrals() {
   const [network, setNetwork] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -230,13 +241,13 @@ export default function MyNetwork() {
           
           <tbody>
             {loading ? (
-               <tr><td colSpan="5" style={{textAlign:'center', padding:'30px', color:'#666'}}>Loading data...</td></tr>
+               <tr><td colSpan="5" style={{textAlign:'center', padding:'40px', color:'#666'}}>Loading network data...</td></tr>
             ) : network.length === 0 ? (
                <tr>
                  <td colSpan="5">
                    <EmptyState>
-                     <Share2 size={32} style={{opacity:0.3}}/>
-                     <span>No members found. Share your link!</span>
+                     <Share2 size={40} style={{opacity:0.2, color:'#fff'}}/>
+                     <span>No members found in your network yet.</span>
                    </EmptyState>
                  </td>
                </tr>
@@ -249,7 +260,7 @@ export default function MyNetwork() {
                   transition={{ delay: index * 0.05 }}
                 >
                   {/* 1. SERIAL NO */}
-                  <td><span style={{color: '#666', fontWeight:'600'}}>#{index + 1}</span></td>
+                  <td><span style={{color: '#555', fontWeight:'700'}}>#{index + 1}</span></td>
                   
                   {/* 2. NAME */}
                   <td>
@@ -269,13 +280,18 @@ export default function MyNetwork() {
 
                   {/* 4. WIDTH (Direct Referrals) */}
                   <td>
-                    <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                       <div style={{
-                        width: '40px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow:'hidden'
+                        width: '50px', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow:'hidden'
                       }}>
-                        <div style={{width: `${Math.min((user.referral_count || 0) * 10, 100)}%`, height:'100%', background:'#3ea6ff'}}></div>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min((user.referral_count || 0) * 10, 100)}%` }}
+                          transition={{ duration: 1, delay: 0.2 }}
+                          style={{height:'100%', background:'#3ea6ff', borderRadius:'4px'}} 
+                        />
                       </div>
-                      <span style={{fontSize:'12px', fontWeight:'bold'}}>{user.referral_count || 0}</span>
+                      <span style={{fontSize:'12px', fontWeight:'700', color: '#fff'}}>{user.referral_count || 0}</span>
                     </div>
                   </td>
 

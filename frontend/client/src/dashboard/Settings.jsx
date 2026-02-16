@@ -4,14 +4,15 @@ import { motion } from "framer-motion";
 import { User, Mail, Lock, Save, Shield, CreditCard, Share2, Copy, Check, Headphones, Send } from "lucide-react";
 import api from "../api/axios";
 
-// ✨ Glassmorphism Card
+// --- STYLED COMPONENTS ---
+
 const Card = styled(motion.div)`
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  background: linear-gradient(145deg, rgba(20, 20, 25, 0.6) 0%, rgba(20, 20, 25, 0.4) 100%);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
   padding: 40px;
-  max-width: 700px;
+  max-width: 800px; /* Slightly wider for better spacing */
   margin: 0 auto 40px auto; 
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 `;
@@ -19,33 +20,45 @@ const Card = styled(motion.div)`
 const Header = styled.div`
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 20px;
+  gap: 20px;
+  margin-bottom: 35px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
-  h2 { margin: 0; font-size: 24px; }
-  p { margin: 5px 0 0; color: ${({ theme }) => theme.textSoft}; font-size: 14px; }
+  div {
+    h2 { margin: 0; font-size: 26px; color: #fff; font-weight: 700; }
+    p { margin: 6px 0 0; color: #888; font-size: 14px; }
+  }
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 16px;
-  color: ${({ theme }) => theme.accent || "#3ea6ff"};
-  margin: 30px 0 15px 0;
+  font-size: 15px;
+  color: #3ea6ff;
+  margin: 35px 0 20px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  
+  &::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(62, 166, 255, 0.2);
+  }
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   
   label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: ${({ theme }) => theme.text};
-    font-size: 14px;
+    margin-bottom: 10px;
+    font-weight: 500;
+    color: #ccc;
+    font-size: 13px;
   }
 `;
 
@@ -54,63 +67,72 @@ const InputWrapper = styled.div`
   
   svg {
     position: absolute;
-    left: 15px;
-    top: 50%; /* Center vertically for single line inputs */
+    left: 16px;
+    top: 50%; 
     transform: translateY(-50%);
     color: #666;
+    transition: color 0.2s;
+  }
+
+  &:focus-within svg {
+    color: #3ea6ff;
   }
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 14px 14px 14px 45px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  padding: 16px 16px 16px 50px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
   color: white;
   font-size: 15px;
   outline: none;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 
   &:focus {
     border-color: #3ea6ff;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 4px rgba(62, 166, 255, 0.1);
   }
   
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.02);
   }
+  
+  &::placeholder { color: #555; }
 `;
 
-// Special Textarea for messages
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 14px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
   color: white;
   font-size: 15px;
   outline: none;
-  transition: all 0.2s;
-  min-height: 100px;
+  transition: all 0.3s ease;
+  min-height: 120px;
   resize: vertical;
   font-family: inherit;
 
   &:focus {
     border-color: #3ea6ff;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 4px rgba(62, 166, 255, 0.1);
   }
 `;
 
 const Button = styled(motion.button)`
   width: 100%;
-  padding: 16px;
-  background: #3ea6ff;
+  padding: 18px;
+  background: linear-gradient(135deg, #3ea6ff 0%, #2d55ff 100%);
   color: #fff;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 700;
   font-size: 16px;
   cursor: pointer;
@@ -119,41 +141,55 @@ const Button = styled(motion.button)`
   justify-content: center;
   gap: 10px;
   margin-top: 30px;
+  box-shadow: 0 4px 15px rgba(62, 166, 255, 0.3);
+  transition: transform 0.1s;
 
-  &:hover { opacity: 0.9; }
+  &:hover { transform: translateY(-2px); }
+  &:active { transform: translateY(0); }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
 `;
 
 const CopyButton = styled.button`
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: 8px;
-  padding: 8px;
+  padding: 8px 12px;
   cursor: pointer;
-  color: #fff;
-  transition: background 0.2s;
+  color: #ccc;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
 
-  &:hover { background: rgba(255, 255, 255, 0.2); }
+  &:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
 `;
 
 const ShareBox = styled.div`
-  background: rgba(62, 166, 255, 0.1);
+  background: linear-gradient(135deg, rgba(62, 166, 255, 0.1) 0%, rgba(62, 166, 255, 0.05) 100%);
   border: 1px solid rgba(62, 166, 255, 0.2);
   border-radius: 16px;
-  padding: 20px;
+  padding: 25px;
   margin-top: 30px;
   text-align: center;
 
-  p { margin: 10px 0 0; font-size: 13px; color: #ccc; }
+  h4 { margin: 0; color: #fff; font-size: 16px; }
+  p { margin: 8px 0 0; font-size: 13px; color: #bbb; line-height: 1.5; }
 `;
 
 const SupportBox = styled.div`
-  margin-top: 40px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 50px;
   padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+`;
+
+const Grid = styled.div`
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 25px;
+  
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
 `;
 
 export default function Settings() {
@@ -239,20 +275,20 @@ export default function Settings() {
   const referralLink = `${window.location.origin}/register?ref=${form.referral_code}`;
 
   return (
-    <Card initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+    <Card initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
       <Header>
-        <div style={{ background: 'rgba(62,166,255,0.2)', padding: '10px', borderRadius: '12px', color: '#3ea6ff' }}>
-          <User size={28} />
+        <div style={{ background: 'rgba(62,166,255,0.15)', padding: '12px', borderRadius: '14px', color: '#3ea6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <User size={32} />
         </div>
         <div>
           <h2>Profile & Security</h2>
-          <p>Manage your account details and referral settings.</p>
+          <p>Manage your personal details, wallet, and account settings.</p>
         </div>
       </Header>
 
       {/* --- PERSONAL DETAILS --- */}
-      <SectionTitle><User size={18}/> Personal Details</SectionTitle>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <SectionTitle><User size={16}/> Personal Details</SectionTitle>
+      <Grid>
         <FormGroup>
             <label>Full Name</label>
             <InputWrapper>
@@ -268,10 +304,10 @@ export default function Settings() {
             <Input value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} />
             </InputWrapper>
         </FormGroup>
-      </div>
+      </Grid>
 
       {/* --- PAYMENT SETTINGS --- */}
-      <SectionTitle><CreditCard size={18}/> Withdrawal Settings</SectionTitle>
+      <SectionTitle><CreditCard size={16}/> Withdrawal Settings</SectionTitle>
       <FormGroup>
         <label>USDT (TRC20) Wallet Address</label>
         <InputWrapper>
@@ -281,8 +317,8 @@ export default function Settings() {
       </FormGroup>
 
       {/* --- REFERRAL & SHARE --- */}
-      <SectionTitle><Share2 size={18}/> Referral & Sharing</SectionTitle>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <SectionTitle><Share2 size={16}/> Referral & Sharing</SectionTitle>
+      <Grid>
          <FormGroup>
             <label>My Referral Code</label>
             <InputWrapper>
@@ -304,14 +340,15 @@ export default function Settings() {
             </CopyButton>
             </InputWrapper>
         </FormGroup>
-      </div>
+      </Grid>
+      
       <ShareBox>
-        <h4 style={{margin:0}}>🚀 Invite Friends & Earn!</h4>
+        <h4>🚀 Invite Friends & Earn!</h4>
         <p>Share your link above. When friends register using your link, you earn rewards.</p>
       </ShareBox>
 
       {/* --- SECURITY --- */}
-      <SectionTitle><Lock size={18}/> Security</SectionTitle>
+      <SectionTitle><Lock size={16}/> Security</SectionTitle>
       <FormGroup>
         <label>New Password (Optional)</label>
         <InputWrapper>
@@ -325,11 +362,11 @@ export default function Settings() {
         {!loading && <Save size={18} />}
       </Button>
 
-      {/* --- HELP & SUPPORT SECTION (NEW) --- */}
+      {/* --- HELP & SUPPORT SECTION --- */}
       <SupportBox>
-        <SectionTitle><Headphones size={18}/> Help & Support</SectionTitle>
-        <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '20px' }}>
-            Have an issue? Send us a message below or email us directly at <a href="mailto:support@travelrent.com" style={{color: '#3ea6ff'}}>support@travelrent.com</a>.
+        <SectionTitle><Headphones size={16}/> Help & Support</SectionTitle>
+        <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '25px', lineHeight: 1.6 }}>
+            Have an issue? Send us a message below or email us directly at <a href="mailto:support@travelrent.com" style={{color: '#3ea6ff', textDecoration: 'none', fontWeight: 600}}>support@travelrent.com</a>.
         </p>
 
         <FormGroup>
@@ -353,7 +390,7 @@ export default function Settings() {
         <Button 
             onClick={handleSupportSubmit} 
             disabled={supportLoading}
-            style={{ marginTop: '10px', background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+            style={{ marginTop: '15px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: 'none' }}
         >
             {supportLoading ? "Sending..." : "Send Message"}
             {!supportLoading && <Send size={16} />}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu } from "lucide-react";
+import { Menu, TrendingUp, Users, DollarSign, Activity, Zap } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
+import api from "../api/axios"; // 👈 Real Data Import
+
 import Sidebar from "../components/Sidebar";
 import ChatBot from "../components/ChatBot";
 import RocketSplash from "../components/RocketSplash"; 
@@ -21,38 +23,45 @@ import AdminPanel from "../dashboard/AdminPanel";
 
 const LayoutWrapper = styled.div`
   min-height: 100vh;
-  background-color: #0a0a0a;
+  background-color: #08080a; /* Deep premium dark background */
   color: #fff;
   position: relative;
   overflow-x: hidden;
   font-family: 'Inter', sans-serif;
+  display: flex;
 `;
 
 const MainContent = styled.main`
-  margin-left: 280px;
-  padding: 40px;
+  flex: 1;
+  margin-left: 280px; /* Exact width of Sidebar */
+  padding: 30px;
   min-height: 100vh;
   position: relative;
   z-index: 1;
-  max-width: 1600px;
-  margin-right: auto;
-
+  width: calc(100% - 280px); /* Ensures content doesn't overflow horizontally */
+  
   @media (max-width: 768px) {
     margin-left: 0;
+    width: 100%;
     padding: 20px;
+    padding-top: 80px; /* Space for Mobile Top Bar */
   }
 `;
 
 const BackgroundGlow = styled.div`
   position: fixed;
-  top: 10%;
-  right: 10%;
-  width: 40vw;
-  height: 40vw;
-  background: radial-gradient(circle, rgba(62, 166, 255, 0.05) 0%, rgba(0,0,0,0) 60%);
-  border-radius: 50%;
-  z-index: 0;
-  pointer-events: none;
+  top: 0; right: 0;
+  width: 60vw; height: 60vw;
+  background: radial-gradient(circle at 70% 20%, rgba(62, 166, 255, 0.08) 0%, rgba(0,0,0,0) 60%);
+  z-index: 0; pointer-events: none;
+`;
+
+const SecondaryGlow = styled.div`
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 40vw; height: 40vw;
+  background: radial-gradient(circle at 20% 80%, rgba(142, 45, 226, 0.06) 0%, rgba(0,0,0,0) 60%);
+  z-index: 0; pointer-events: none;
 `;
 
 const MobileTopBar = styled.div`
@@ -60,97 +69,197 @@ const MobileTopBar = styled.div`
   padding: 15px 20px;
   align-items: center;
   justify-content: space-between;
-  background: rgba(10, 10, 10, 0.9);
+  background: rgba(10, 10, 15, 0.9);
   backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 90;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 90;
 
-  @media (max-width: 768px) {
-    display: flex;
-  }
+  @media (max-width: 768px) { display: flex; }
 `;
 
-// --- WELCOME BANNER ---
-const WelcomeBanner = styled(motion.div)`
-  background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 24px;
-  padding: 40px;
+// --- DASHBOARD WIDGET STYLES ---
+
+const WelcomeSection = styled.div`
+  display: flex; justify-content: space-between; align-items: flex-end;
   margin-bottom: 30px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-
-  h1 { 
-    margin: 0 0 10px 0; 
-    font-size: 2.2rem; 
-    font-weight: 800;
-    background: linear-gradient(90deg, #fff, #a0a0a0); 
-    -webkit-background-clip: text; 
-    -webkit-text-fill-color: transparent; 
-  }
-  p { color: #888; margin: 0; font-size: 1.1rem; }
 `;
 
-// --- OVERVIEW SECTION ---
-const OverviewGrid = styled.div`
+const WelcomeText = styled.div`
+  h1 {
+    font-size: 28px; font-weight: 800; margin: 0;
+    background: linear-gradient(90deg, #fff, #a0a0a0);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  p { font-size: 14px; color: #888; margin: 6px 0 0 0; }
+`;
+
+// ✨ 1. STATS GRID
+const StatsRow = styled.div`
   display: grid;
-  /* Updated to 2 columns: Wallet (smaller) and Income (larger) */
-  grid-template-columns: 1fr 2fr; 
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+
+  @media (max-width: 1200px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+`;
+
+const StatCard = styled(motion.div)`
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex; align-items: center; gap: 16px;
+  transition: all 0.3s ease;
+  position: relative; overflow: hidden;
+
+  &:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .icon-box {
+    width: 50px; height: 50px; border-radius: 14px;
+    background: ${props => props.$bg || 'rgba(62, 166, 255, 0.1)'};
+    color: ${props => props.$color || '#3ea6ff'};
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  
+  .info {
+    display: flex; flex-direction: column;
+    span { font-size: 12px; color: #888; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+    strong { font-size: 20px; color: #fff; font-weight: 700; margin-top: 4px; }
+  }
+`;
+
+// ✨ 2. BENTO GRID LAYOUT
+const DashboardGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
   gap: 25px;
   margin-bottom: 40px;
-
-  @media (max-width: 1024px) { grid-template-columns: 1fr; }
 `;
 
-const ChartWrapper = styled(motion.div)`
-  /* Ensures chart looks good on all screens */
-  width: 100%;
-`;
+const GridItem = styled(motion.div)`
+  /* Layout Logic */
+  &.wallet-section { grid-column: span 4; } /* 33% width */
+  &.chart-section { grid-column: span 8; }  /* 66% width */
+  &.packages-section { grid-column: span 12; } /* Full width */
 
-const SectionTitle = styled(motion.h3)`
-  font-size: 1.5rem;
-  margin-bottom: 20px;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  &::before {
-    content: ''; width: 4px; height: 24px; background: #3ea6ff; border-radius: 2px;
+  @media (max-width: 1200px) {
+    &.wallet-section { grid-column: span 12; }
+    &.chart-section { grid-column: span 12; }
   }
 `;
 
-// Animation Variants
+// --- ANIMATION VARIANTS ---
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 60 } } };
+const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 50 } } };
 
-const Overview = ({ user }) => (
-  <motion.div variants={containerVariants} initial="hidden" animate="visible">
-    <motion.div variants={itemVariants}>
-      <WelcomeBanner>
-        <h1>Welcome back, {user?.name || "Investor"} 🚀</h1>
-        <p>Your portfolio performance and active investments at a glance.</p>
-      </WelcomeBanner>
-    </motion.div>
+// --- OVERVIEW COMPONENT (With Real Data) ---
+const Overview = ({ user }) => {
+  const [stats, setStats] = useState({
+    balance: 0,
+    totalEarnings: 0,
+    activePlans: 0,
+    totalReferrals: 0
+  });
 
-    <OverviewGrid>
-      {/* 1. Wallet */}
-      <motion.div variants={itemVariants}><Wallet /></motion.div>
+  // Fetch Real Data from API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await api.get("/auth/dashboard-stats"); // Ensure this endpoint exists in backend
+        if(res.data) {
+           setStats({
+             balance: Number(res.data.balance) || 0,
+             totalEarnings: Number(res.data.totalEarnings) || 0,
+             activePlans: Number(res.data.activePlans) || 0,
+             totalReferrals: Number(res.data.totalReferrals) || 0
+           });
+        }
+      } catch (error) {
+        console.error("Using default stats (API Error or Dev Mode)");
+        // Fallback for UI testing if API fails
+        setStats({ balance: 0, totalEarnings: 0, activePlans: 0, totalReferrals: 0 }); 
+      }
+    };
+    fetchStats();
+  }, []);
+
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible">
       
-      {/* 2. Withdraw REMOVED from here */}
-      
-      {/* 3. Income Chart */}
-      <ChartWrapper variants={itemVariants}><Income /></ChartWrapper>
-    </OverviewGrid>
+      <WelcomeSection>
+        <WelcomeText>
+          <h1>Hello, {user?.name?.split(' ')[0] || "User"} 👋</h1>
+          <p>Here is your investment portfolio overview.</p>
+        </WelcomeText>
+      </WelcomeSection>
 
-    <motion.div variants={itemVariants}>
-      <SectionTitle>Available Packages</SectionTitle>
-      <Packages />
+      {/* 1. TOP STATS ROW */}
+      <StatsRow>
+         <StatCard variants={itemVariants}>
+            <div className="icon-box"><DollarSign size={24}/></div>
+            <div className="info">
+              <span>Total Balance</span>
+              <strong>${stats.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+            </div>
+         </StatCard>
+         
+         <StatCard variants={itemVariants} $bg="rgba(46, 204, 113, 0.1)" $color="#2ecc71">
+            <div className="icon-box"><TrendingUp size={24}/></div>
+            <div className="info">
+              <span>Total Profit</span>
+              <strong>${stats.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+            </div>
+         </StatCard>
+         
+         <StatCard variants={itemVariants} $bg="rgba(231, 76, 60, 0.1)" $color="#ff6b6b">
+            <div className="icon-box"><Zap size={24}/></div>
+            <div className="info">
+              <span>Active Plans</span>
+              <strong>{stats.activePlans} Running</strong>
+            </div>
+         </StatCard>
+         
+         <StatCard variants={itemVariants} $bg="rgba(142, 45, 226, 0.1)" $color="#8e2de2">
+            <div className="icon-box"><Users size={24}/></div>
+            <div className="info">
+              <span>Network</span>
+              <strong>{stats.totalReferrals} Partners</strong>
+            </div>
+         </StatCard>
+      </StatsRow>
+
+      {/* 2. MAIN BENTO GRID */}
+      <DashboardGrid>
+        
+        {/* Left: Compact Wallet */}
+        <GridItem className="wallet-section" variants={itemVariants}>
+           <Wallet /> 
+        </GridItem>
+
+        {/* Right: Big Chart */}
+        <GridItem className="chart-section" variants={itemVariants}>
+           <Income />
+        </GridItem>
+
+        {/* Bottom: Packages */}
+        <GridItem className="packages-section" variants={itemVariants}>
+           <Packages />
+        </GridItem>
+
+      </DashboardGrid>
+
     </motion.div>
-  </motion.div>
-);
+  );
+};
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -179,15 +288,11 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!user || !user.email) return; 
 
-    // A. IF USER IS ADMIN
     if (user.role === 'admin') {
        if (!activeTab.startsWith("admin-")) {
-         setActiveTab('admin-overview'); 
          if (location.pathname !== '/admin') navigate('/admin');
        }
-    } 
-    // B. IF NORMAL USER
-    else {
+    } else {
        if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
          setActiveTab('dashboard');
          navigate('/dashboard');
@@ -203,6 +308,7 @@ export default function DashboardLayout() {
        if (location.pathname === '/admin') navigate('/dashboard');
     }
     setActiveTab(tabId);
+    setSidebarOpen(false);
   };
 
   const handleLogout = () => {
@@ -213,14 +319,13 @@ export default function DashboardLayout() {
     }
   };
 
+  // Content Rendering Logic
   const renderContent = () => {
-    // 🛡️ ADMIN ROUTING LOGIC
     if (activeTab.startsWith("admin-")) {
       const view = activeTab.replace("admin-", ""); 
       return <AdminPanel initialView={view} />;
     }
 
-    // 👤 USER ROUTING LOGIC
     switch (activeTab) {
       case "dashboard": return <Overview user={user} />;
       case "wallet":    return <Wallet />;
@@ -236,7 +341,6 @@ export default function DashboardLayout() {
 
   return (
     <LayoutWrapper>
-      {/* 🚀 3. ROCKET ANIMATION OVERLAY */}
       <AnimatePresence>
         {showSplash && (
           <RocketSplash onComplete={() => setShowSplash(false)} />
@@ -244,6 +348,7 @@ export default function DashboardLayout() {
       </AnimatePresence>
 
       <BackgroundGlow />
+      <SecondaryGlow />
       
       <MobileTopBar>
         <span style={{ fontWeight: 800, fontSize: '20px' }}>Travel<span style={{color: '#3ea6ff'}}>Rent</span></span>

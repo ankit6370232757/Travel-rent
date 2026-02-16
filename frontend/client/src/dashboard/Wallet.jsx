@@ -8,9 +8,9 @@ import toast from "react-hot-toast";
 
 // --- STYLED COMPONENTS ---
 const Card = styled(motion.div)`
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  background: linear-gradient(145deg, rgba(20, 20, 25, 0.6) 0%, rgba(20, 20, 25, 0.4) 100%);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
   padding: 30px;
   height: 100%; 
@@ -35,7 +35,7 @@ const Card = styled(motion.div)`
 
 const Header = styled.div`
   display: flex; align-items: center; gap: 12px;
-  color: ${({ theme }) => theme.textSoft || '#aaa'};
+  color: #aaa;
   font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;
   margin-bottom: 20px;
 `;
@@ -128,9 +128,6 @@ export default function Wallet() {
   const [txnId, setTxnId] = useState(""); 
   const [loading, setLoading] = useState(false);
 
-  // Get User for Prefilling
-  const user = JSON.parse(localStorage.getItem("user"));
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -160,15 +157,12 @@ export default function Wallet() {
 
     setLoading(true);
 
-    // --- CASE A: RAZORPAY (If you still use it) ---
     if (selectedMethod === "razorpay") {
-      // ... (Existing Razorpay Logic - kept in case you re-enable it)
       toast.error("Razorpay is currently disabled.");
       setLoading(false);
       return;
     }
 
-    // --- CASE B: MANUAL DEPOSIT (UPI / Bank / Crypto) ---
     if (!txnId) {
       setLoading(false);
       return toast.error("Please enter the Transaction ID (UTR)");
@@ -191,7 +185,6 @@ export default function Wallet() {
     }
   };
 
-  // Find details for the selected manual method
   const activeMethodDetails = methods.find(m => m.method_name === selectedMethod);
   const isRazorpay = selectedMethod === "razorpay";
   const isManual = selectedMethod && !isRazorpay;
@@ -224,7 +217,6 @@ export default function Wallet() {
         <Divider />
         <Label>Add Funds</Label>
         
-        {/* 1. Payment Method Dropdown */}
         <Select value={selectedMethod} onChange={(e) => setSelectedMethod(e.target.value)}>
           <option value="">-- Select Payment Method --</option>
           {methods.map(method => (
@@ -234,7 +226,6 @@ export default function Wallet() {
           ))}
         </Select>
 
-        {/* 2. Show Manual Details (QR Code + Address) */}
         <AnimatePresence>
           {isManual && activeMethodDetails && (
             <DetailsBox 
@@ -245,7 +236,6 @@ export default function Wallet() {
             >
               <p>Scan to Pay or Copy Address</p>
               
-              {/* 👇 DISPLAY QR CODE IF AVAILABLE */}
               {activeMethodDetails.qr_code ? (
                 <img 
                   src={activeMethodDetails.qr_code} 
@@ -262,7 +252,6 @@ export default function Wallet() {
           )}
         </AnimatePresence>
 
-        {/* 3. Input Fields */}
         <div style={{display:'flex', flexDirection: 'column', gap: 10}}>
           <InputGroup>
             <Input 
@@ -273,7 +262,6 @@ export default function Wallet() {
             />
           </InputGroup>
 
-          {/* Show Transaction ID Input only for Manual Methods */}
           {isManual && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <Input 
