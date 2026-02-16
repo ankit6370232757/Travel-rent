@@ -45,14 +45,11 @@ const Header = styled.div`
   }
 `;
 
-// --- FILTER TABS ---
 const FilterWrapper = styled.div`
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 5px;
-  
-  /* Hide Scrollbar */
   scrollbar-width: none; 
   &::-webkit-scrollbar { display: none; }
 `;
@@ -80,7 +77,6 @@ const FilterBtn = styled.button`
   }
 `;
 
-// --- TABLE STYLES ---
 const TableContainer = styled.div`
   width: 100%;
   overflow-x: auto;
@@ -92,7 +88,7 @@ const TableContainer = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px; /* Ensures table doesn't squash on mobile */
+  min-width: 900px;
 `;
 
 const Thead = styled.thead`
@@ -113,7 +109,6 @@ const Th = styled.th`
 const Tr = styled(motion.tr)`
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   transition: background 0.2s;
-  
   &:last-child { border-bottom: none; }
   &:hover { background: rgba(255, 255, 255, 0.04); }
 `;
@@ -125,7 +120,6 @@ const Td = styled.td`
   vertical-align: middle;
 `;
 
-// --- BADGES ---
 const IconBox = styled.div`
   width: 38px; height: 38px;
   border-radius: 10px;
@@ -137,7 +131,6 @@ const IconBox = styled.div`
 
 const TypeInfo = styled.div`
   display: flex; align-items: center; gap: 12px;
-  
   .text-group {
     display: flex; flex-direction: column;
     strong { color: #fff; font-weight: 500; font-size: 14px; }
@@ -175,13 +168,11 @@ export default function History() {
   const [filteredData, setFilteredData] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
-  const [currentBalance, setCurrentBalance] = useState(0);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  // 1. Fetch History AND Current Balance to calculate running totals
   const fetchData = async () => {
     try {
       const [histRes, walletRes] = await Promise.all([
@@ -191,18 +182,28 @@ export default function History() {
 
       const rawData = histRes.data;
       const liveBalance = Number(walletRes.data.balance);
-      setCurrentBalance(liveBalance);
 
-      // 2. Calculate Running Balance (Reverse Engineering)
+      /**
+       * BALANCE CALCULATION LOGIC
+       * We reverse engineer the balance history starting from the live current balance.
+       */
       let runningBal = liveBalance;
       
-      const processedData = rawData.map(tx => {
+      const processedData = rawData.map((tx) => {
         const amt = Number(tx.amount);
-        const isCredit = ['DEPOSIT', 'DAILY', 'REFERRAL', 'OTS_BONUS'].some(t => tx.type.includes(t));
-        const isDebit = ['WITHDRAWAL', 'INVESTMENT'].includes(tx.type);
+        const type = tx.type.toUpperCase();
+
+        // CREDIT logic (Money added to wallet balance)
+        const isCredit = ['DEPOSIT', 'DAILY', 'REFERRAL', 'OTS_BONUS', 'EARNING', 'BONUS', 'CREDITED'].some(t => type.includes(t));
+        
+        // DEBIT logic (Money deducted from wallet balance)
+        const isDebit = ['WITHDRAWAL', 'INVESTMENT', 'PACKAGE_BUY'].some(t => type.includes(t));
 
         const snapshotBalance = runningBal;
 
+        // When traversing backward through sorted history (Newest to Oldest):
+        // If a transaction was a credit, the balance BEFORE it was lower.
+        // If a transaction was a debit, the balance BEFORE it was higher.
         if (isCredit) {
            runningBal -= amt;
         } else if (isDebit) {
@@ -216,48 +217,49 @@ export default function History() {
       setFilteredData(processedData);
       setLoading(false);
     } catch (err) {
-      console.error(err);
+      console.error("History fetch error:", err);
       setLoading(false);
     }
   };
 
-  // 3. Filter Logic
   useEffect(() => {
     if (filter === "ALL") {
       setFilteredData(transactions);
+    } else if (filter === "EARNING") {
+      setFilteredData(transactions.filter(tx => tx.isCredit && !tx.type.includes('DEPOSIT')));
     } else {
-      setFilteredData(transactions.filter(tx => tx.type.includes(filter)));
+      setFilteredData(transactions.filter(tx => tx.type.toUpperCase().includes(filter)));
     }
   }, [filter, transactions]);
 
-  // Helpers for Styling
   const getTypeStyle = (type) => {
-    if (type.includes('DEPOSIT')) return { color: '#2ecc71', bg: 'rgba(46, 204, 113, 0.1)', icon: <ArrowDownLeft size={18} />, label: 'Deposit' };
-    if (type.includes('WITHDRAW')) return { color: '#ff4d4d', bg: 'rgba(255, 77, 77, 0.1)', icon: <ArrowUpRight size={18} />, label: 'Withdrawal' };
-    if (type.includes('INVEST')) return { color: '#3ea6ff', bg: 'rgba(62, 166, 255, 0.1)', icon: <RefreshCw size={18} />, label: 'Investment' };
-    if (type.includes('BONUS') || type.includes('DAILY')) return { color: '#f1c40f', bg: 'rgba(241, 196, 15, 0.1)', icon: <TrendingUp size={18} />, label: 'Earning' };
+    const t = type.toUpperCase();
+    if (t.includes('DEPOSIT')) return { color: '#2ecc71', bg: 'rgba(46, 204, 113, 0.1)', icon: <ArrowDownLeft size={18} />, label: 'Deposit' };
+    if (t.includes('WITHDRAW')) return { color: '#ff4d4d', bg: 'rgba(255, 77, 77, 0.1)', icon: <ArrowUpRight size={18} />, label: 'Withdrawal' };
+    if (t.includes('INVEST')) return { color: '#3ea6ff', bg: 'rgba(62, 166, 255, 0.1)', icon: <RefreshCw size={18} />, label: 'Investment' };
+    if (t.includes('BONUS') || t.includes('DAILY') || t.includes('EARNING')) return { color: '#f1c40f', bg: 'rgba(241, 196, 15, 0.1)', icon: <TrendingUp size={18} />, label: 'Earning' };
     return { color: '#fff', bg: '#333', icon: <CheckCircle size={18} />, label: type };
   };
 
   const getStatusStyle = (status) => {
-    if (['APPROVED', 'CREDITED', 'CONFIRMED', 'SUCCESS'].includes(status)) return { bg: 'rgba(46, 204, 113, 0.1)', color: '#2ecc71', border: 'rgba(46, 204, 113, 0.2)' };
-    if (status === 'PENDING') return { bg: 'rgba(241, 196, 15, 0.1)', color: '#f1c40f', border: 'rgba(241, 196, 15, 0.2)' };
+    const s = status ? status.toUpperCase() : 'PENDING';
+    if (['APPROVED', 'CREDITED', 'CONFIRMED', 'SUCCESS'].includes(s)) return { bg: 'rgba(46, 204, 113, 0.1)', color: '#2ecc71', border: 'rgba(46, 204, 113, 0.2)' };
+    if (s === 'PENDING') return { bg: 'rgba(241, 196, 15, 0.1)', color: '#f1c40f', border: 'rgba(241, 196, 15, 0.2)' };
     return { bg: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: 'rgba(255, 77, 77, 0.2)' };
   };
 
   return (
     <Card initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       
-      {/* Header & Filters */}
       <Header>
         <h2><Clock size={22} color="#3ea6ff" /> Transaction History</h2>
         
         <FilterWrapper>
-          {["ALL", "DEPOSIT", "WITHDRAW", "INVESTMENT", "EARNING"].map((f) => (
+          {["ALL", "DEPOSIT", "WITHDRAWAL", "INVESTMENT", "EARNING"].map((f) => (
             <FilterBtn 
               key={f} 
-              active={filter === f} 
-              onClick={() => setFilter(f)}
+              active={filter === (f === "WITHDRAWAL" ? "WITHDRAW" : f)} 
+              onClick={() => setFilter(f === "WITHDRAWAL" ? "WITHDRAW" : f)}
             >
               {f === "ALL" ? "All Transactions" : f.charAt(0) + f.slice(1).toLowerCase()}
             </FilterBtn>
@@ -265,7 +267,6 @@ export default function History() {
         </FilterWrapper>
       </Header>
 
-      {/* Table */}
       {loading ? (
         <div style={{textAlign: 'center', padding: '60px', color: '#666'}}>
            <RefreshCw size={24} className="spin" style={{marginBottom:10}}/>
@@ -298,19 +299,23 @@ export default function History() {
                         <IconBox bg={style.bg} color={style.color}>{style.icon}</IconBox>
                         <div className="text-group">
                            <strong>{style.label}</strong>
-                           <span>{tx.transaction_id || "System_Gen"}</span>
+                           <span>{tx.id ? `TRX-${tx.id}` : "System_Gen"}</span>
                         </div>
                       </TypeInfo>
                     </Td>
 
                     <Td>
-                      <div style={{color:'#ddd', fontSize:13, fontWeight: 500}}>{new Date(tx.date).toLocaleDateString()}</div>
-                      <div style={{fontSize:11, color:'#777'}}>{new Date(tx.date).toLocaleTimeString()}</div>
+                      <div style={{color:'#ddd', fontSize:13, fontWeight: 500}}>
+                        {new Date(tx.date).toLocaleDateString()}
+                      </div>
+                      <div style={{fontSize:11, color:'#777'}}>
+                        {new Date(tx.date).toLocaleTimeString()}
+                      </div>
                     </Td>
 
                     <Td>
                       <StatusBadge bg={statusStyle.bg} color={statusStyle.color} border={statusStyle.border}>
-                        {tx.status}
+                        {tx.status || 'SUCCESS'}
                       </StatusBadge>
                     </Td>
 
@@ -332,7 +337,7 @@ export default function History() {
                   <Td colSpan="6" style={{textAlign: 'center', padding: '60px', color: '#666'}}>
                     <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:10}}>
                        <AlertCircle size={30} color="#444"/>
-                       <span>No transactions found for this filter.</span>
+                       <span>No records found for this category.</span>
                     </div>
                   </Td>
                 </tr>
