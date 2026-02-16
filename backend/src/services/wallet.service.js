@@ -35,7 +35,6 @@ exports.requestDeposit = async(userId, amount) => {
 /**
  * Withdraw Funds
  */
-e
 /**
  * Withdraw Funds via Admin-Defined Payment Method
  */
