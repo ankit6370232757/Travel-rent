@@ -234,9 +234,23 @@ exports.deletePackage = async(req, res) => {
 exports.getAllRequests = async(req, res) => {
     try {
         const query = `
-            SELECT id, user_id, amount, 'DEPOSIT' as type, status, created_at as date FROM deposits
+            SELECT 
+                id, 
+                user_id, 
+                amount, 
+                'DEPOSIT' as type, 
+                status,          -- 👈 Ensure this is exactly 'status'
+                created_at as date 
+            FROM deposits
             UNION ALL
-            SELECT id, user_id, amount, 'WITHDRAW' as type, status, created_at as date FROM withdrawals
+            SELECT 
+                id, 
+                user_id, 
+                amount, 
+                'WITHDRAW' as type, 
+                status,          -- 👈 Ensure this is exactly 'status'
+                created_at as date 
+            FROM withdrawals
             ORDER BY date DESC
         `;
         const result = await pool.query(query);
