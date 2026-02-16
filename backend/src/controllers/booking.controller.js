@@ -67,11 +67,11 @@ exports.bookSeat = async(req, res) => {
             ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6) RETURNING id`, [userId, pkg.id, seatInBatch, currentBatch, otsBonus, incomeType]
         );
 
-        // 7. Record Investment as a Withdrawal (History)
-        await client.query(
-            `INSERT INTO withdrawals (user_id, amount, fee, net_amount, status, created_at) 
-             VALUES ($1, $2, 0, $2, 'APPROVED', NOW())`, [userId, price]
-        );
+        // // 7. Record Investment as a Withdrawal (History)
+        // await client.query(
+        //     `INSERT INTO withdrawals (user_id, amount, fee, net_amount, status, created_at) 
+        //      VALUES ($1, $2, 0, $2, 'APPROVED', NOW())`, [userId, price]
+        // );
 
         // 8. PAY INSTANT BONUS (Credit to Wallet)
         if (otsBonus > 0) {
