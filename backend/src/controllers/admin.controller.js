@@ -254,13 +254,15 @@ exports.getAllRequests = async(req, res) => {
     }
 };
 
+// admin.controller.js - handleRequest function
+
 exports.handleRequest = async(req, res) => {
     const client = await pool.connect();
     try {
-        const { id, type, action } = req.body; // action = 'APPROVE' | 'REJECT'
+        const { id, type, action } = req.body;
         await client.query("BEGIN");
 
-        // 🛡️ Standardize statuses for the frontend filters
+        // 🛡️ Standardize the final status string
         const finalStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
 
         if (type === 'DEPOSIT') {
@@ -270,7 +272,7 @@ exports.handleRequest = async(req, res) => {
             if (action === 'APPROVE') {
                 await client.query("UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [dep.rows[0].amount, dep.rows[0].user_id]);
             }
-            // Update the status column verified in image_05aea7.png
+            // ✅ Change 'action' to 'finalStatus'
             await client.query("UPDATE deposits SET status = $1 WHERE id = $2", [finalStatus, id]);
 
         } else if (type === 'WITHDRAW') {
@@ -278,18 +280,16 @@ exports.handleRequest = async(req, res) => {
             if (!wd.rows.length) throw new Error("Withdrawal not found");
 
             if (action === 'REJECT') {
-                // Refund money to balance if rejected
                 await client.query("UPDATE wallets SET balance = balance + $1, locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].amount, wd.rows[0].user_id]);
             } else {
-                // Confirm withdrawal by clearing the locked_balance
                 await client.query("UPDATE wallets SET locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].amount, wd.rows[0].user_id]);
             }
-            // Update the status column verified in image_05aea7.png
+            // ✅ Change 'action' to 'finalStatus'
             await client.query("UPDATE withdrawals SET status = $1 WHERE id = $2", [finalStatus, id]);
         }
 
         await client.query("COMMIT");
-        res.json({ message: `Request ${action}ED` });
+        res.json({ message: `Request ${finalStatus}` });
 
     } catch (error) {
         await client.query("ROLLBACK");
