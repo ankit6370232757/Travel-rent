@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require("../middleware/auth.middleware");
 const adminController = require("../controllers/admin.controller");
 
-router.get("/requests", authMiddleware, adminController.getPendingRequests);
+router.get("/requests", authMiddleware, adminController.getAllRequests);
 router.post("/handle", authMiddleware, adminController.handleRequest);
 router.get("/users", authMiddleware, adminController.getAllUsers);
 router.post("/payment-methods", authMiddleware, adminController.addPaymentMethod);
