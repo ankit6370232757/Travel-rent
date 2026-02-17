@@ -15,13 +15,13 @@ exports.runDailyIncome = async() => {
         for (const pkg of packages.rows) {
             const BATCH_SIZE = pkg.total_seats || 180;
 
-            // 1. Identify which Batches are FULL
+            // 1. Identify which Batches are FULL (Strict numeric comparison)
             const fullBatchesRes = await pool.query(
                 `SELECT batch_number 
                  FROM seats 
                  WHERE package_id = $1 AND status = 'OCCUPIED' 
                  GROUP BY batch_number 
-                 HAVING COUNT(*) >= $2`, [pkg.id, BATCH_SIZE]
+                 HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
             );
 
             const fullBatches = fullBatchesRes.rows.map(r => r.batch_number);
@@ -34,11 +34,12 @@ exports.runDailyIncome = async() => {
                  FROM seats 
                  WHERE package_id = $1 
                  AND status = 'OCCUPIED'
-                 AND income_type = 'DAILY'  -- 👈 CHECK INCOME TYPE
+                 AND income_type = 'DAILY'
                  AND batch_number = ANY($2::int[])`, [pkg.id, fullBatches]
             );
 
             for (const seat of seatRes.rows) {
+                // Priority: Seat-specific rate > Package rate
                 const incomeAmount = Number(seat.daily_income) > 0 ?
                     Number(seat.daily_income) :
                     Number(pkg.daily_income);
@@ -53,9 +54,9 @@ exports.runDailyIncome = async() => {
                 if (exists.rows.length > 0) continue;
 
                 if (incomeAmount > 0) {
-                    // Update Wallet
+                    // Update Wallet with NULL protection (COALESCE)
                     await pool.query(
-                        "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
                     );
 
                     // Log Transaction
@@ -82,8 +83,6 @@ exports.runDailyIncome = async() => {
 /**
  * 🟡 RUN MONTHLY INCOME
  * Logic: Runs every 30 days.
- * Condition 1: Pays ONLY if the specific BATCH is full.
- * Condition 2: Pays ONLY seats with income_type = 'MONTHLY'.
  */
 exports.runMonthlyIncome = async() => {
     console.log("🔄 Starting Monthly Income Distribution...");
@@ -99,18 +98,18 @@ exports.runMonthlyIncome = async() => {
                  FROM seats 
                  WHERE package_id = $1 AND status = 'OCCUPIED' 
                  GROUP BY batch_number 
-                 HAVING COUNT(*) >= $2`, [pkg.id, BATCH_SIZE]
+                 HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
             );
+
             const fullBatches = fullBatchesRes.rows.map(r => r.batch_number);
             if (fullBatches.length === 0) continue;
 
-            // Fetch seats with MONTHLY Plan
             const seatsRes = await pool.query(
                 `SELECT id, user_id, booked_at, monthly_income 
                  FROM seats 
                  WHERE package_id = $1 
                  AND status = 'OCCUPIED'
-                 AND income_type = 'MONTHLY' -- 👈 CHECK INCOME TYPE
+                 AND income_type = 'MONTHLY'
                  AND batch_number = ANY($2::int[])`, [pkg.id, fullBatches]
             );
 
@@ -136,7 +135,7 @@ exports.runMonthlyIncome = async() => {
 
                 if (incomeAmount > 0) {
                     await pool.query(
-                        "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
                     );
 
                     await pool.query(
@@ -161,8 +160,6 @@ exports.runMonthlyIncome = async() => {
 /**
  * 🔵 RUN YEARLY INCOME
  * Logic: Runs every 365 days.
- * Condition 1: Pays ONLY if the specific BATCH is full.
- * Condition 2: Pays ONLY seats with income_type = 'YEARLY'.
  */
 exports.runYearlyIncome = async() => {
     console.log("🔄 Starting Yearly Income Distribution...");
@@ -178,18 +175,18 @@ exports.runYearlyIncome = async() => {
                  FROM seats 
                  WHERE package_id = $1 AND status = 'OCCUPIED' 
                  GROUP BY batch_number 
-                 HAVING COUNT(*) >= $2`, [pkg.id, BATCH_SIZE]
+                 HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
             );
+
             const fullBatches = fullBatchesRes.rows.map(r => r.batch_number);
             if (fullBatches.length === 0) continue;
 
-            // Fetch seats with YEARLY Plan
             const seatsRes = await pool.query(
                 `SELECT id, user_id, booked_at, yearly_income 
                  FROM seats 
                  WHERE package_id = $1 
                  AND status = 'OCCUPIED'
-                 AND income_type = 'YEARLY' -- 👈 CHECK INCOME TYPE
+                 AND income_type = 'YEARLY'
                  AND batch_number = ANY($2::int[])`, [pkg.id, fullBatches]
             );
 
@@ -215,7 +212,7 @@ exports.runYearlyIncome = async() => {
 
                 if (incomeAmount > 0) {
                     await pool.query(
-                        "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
                     );
 
                     await pool.query(

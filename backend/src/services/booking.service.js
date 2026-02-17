@@ -1,7 +1,7 @@
 const pool = require("../config/db");
 const referralService = require("./referral.service");
 
-exports.bookSeat = async(userId, packageName) => {
+exports.bookSeat = async(userId, packageName, incomeType) => { // 👈 Added incomeType
     const client = await pool.connect();
 
     try {
@@ -18,10 +18,11 @@ exports.bookSeat = async(userId, packageName) => {
 
         const pkg = packageRes.rows[0];
         const ticketPrice = Number(pkg.ticket_price);
+        const BATCH_SIZE = pkg.total_seats || 180; // 👈 Needed for batch calculation
 
-        // 2️⃣ CHECK WALLET BALANCE (Locking Row)
+        // 2️⃣ CHECK WALLET BALANCE (Locking Row with NULL protection)
         const walletRes = await client.query(
-            "SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE", [userId]
+            "SELECT COALESCE(balance, 0) as balance FROM wallets WHERE user_id = $1 FOR UPDATE", [userId]
         );
 
         if (walletRes.rows.length === 0) {
@@ -54,45 +55,61 @@ exports.bookSeat = async(userId, packageName) => {
 
         const seat = seatRes.rows[0];
 
-        // 5️⃣ Assign seat
+        // 5️⃣ Calculate Batch Number (Critical for income.service.js)
+        const countRes = await client.query(
+            "SELECT COUNT(*) FROM seats WHERE package_id = $1 AND status = 'OCCUPIED'", [pkg.id]
+        );
+        const totalOccupied = parseInt(countRes.rows[0].count);
+        const currentBatch = Math.floor(totalOccupied / BATCH_SIZE) + 1;
+
+        // 6️⃣ Assign seat (Fixed status and added income data)
+        // We change status to 'OCCUPIED' so income.service.js can see it
         await client.query(
             `UPDATE seats
              SET user_id = $1,
-                 status = 'BOOKED',
-                 booked_at = NOW()
-             WHERE id = $2`, [userId, seat.id]
+                 status = 'OCCUPIED', 
+                 booked_at = NOW(),
+                 income_type = $3,
+                 batch_number = $4,
+                 daily_income = $5,
+                 monthly_income = $6,
+                 yearly_income = $7
+             WHERE id = $2`, [
+                userId,
+                seat.id,
+                incomeType || 'DAILY', // Default to DAILY if not provided
+                currentBatch,
+                pkg.daily_income, // Saving rates directly to seat
+                pkg.monthly_income,
+                pkg.yearly_income
+            ]
         );
 
-        // 6️⃣ COMMIT TRANSACTION (Booking is now Saved & Paid!) ✅
+        // 7️⃣ COMMIT TRANSACTION
         await client.query("COMMIT");
 
-        // ---------------------------------------------------------
-        // 7️⃣ REFERRAL LOGIC (Run AFTER Commit to prevent Deadlock)
-        // ---------------------------------------------------------
+        // 8️⃣ REFERRAL LOGIC
         try {
             console.log("🔄 Processing Referrals...");
-            // Run these in background (await ensures they finish before response, 
-            // but failure won't rollback the booking)
             await referralService.processDepthReferral(userId, ticketPrice);
             await referralService.processWidthReferral(userId);
             console.log("✅ Referral Bonus Processed");
         } catch (refError) {
             console.error("⚠️ Referral Warning:", refError.message);
-            // We do NOT throw here, so the user still gets their seat.
         }
 
         return {
             package: pkg.name,
             seatNumber: seat.seat_number,
+            batchNumber: currentBatch,
             ticketPrice: ticketPrice,
             remainingBalance: currentBalance - ticketPrice
         };
 
     } catch (error) {
-        await client.query("ROLLBACK"); // Only rollback if Booking logic failed
+        await client.query("ROLLBACK");
         console.error("❌ Booking Transaction Failed:", error.message);
         throw error;
-
     } finally {
         client.release();
     }
