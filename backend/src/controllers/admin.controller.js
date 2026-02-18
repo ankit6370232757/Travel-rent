@@ -317,3 +317,30 @@ exports.getPendingRequests = async(req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// Toggle User Active Status (Deactivate/Activate)
+exports.toggleUserStatus = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_active } = req.body; // Expecting the new boolean status
+
+        // Update the user's status in the users table
+        const result = await pool.query(
+            "UPDATE users SET is_active = $1 WHERE id = $2 RETURNING id, name, is_active", [is_active, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const statusLabel = is_active ? "Activated" : "Deactivated";
+        res.json({
+            success: true,
+            message: `User ${result.rows[0].name} has been ${statusLabel}`,
+            user: result.rows[0]
+        });
+    } catch (err) {
+        console.error("Toggle Status Error:", err);
+        res.status(500).json({ message: "Failed to update user status" });
+    }
+};
