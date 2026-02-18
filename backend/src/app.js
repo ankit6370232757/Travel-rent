@@ -13,6 +13,7 @@ const adminRoutes = require("./routes/admin.routes");
 const transactionsRoutes = require("./routes/transactions.routes");
 const supportRoutes = require("./routes/support.routes");
 const chatRoutes = require("./routes/chat.Routes");
+const publicRoutes = require("./routes/public.routes");
 
 const app = express(); // ✅ app must be created FIRST
 
@@ -41,5 +42,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/transactions", transactionsRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/settings", publicRoutes);
 
 module.exports = app;
