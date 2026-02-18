@@ -344,3 +344,38 @@ exports.toggleUserStatus = async(req, res) => {
         res.status(500).json({ message: "Failed to update user status" });
     }
 };
+
+// Get Global Settings
+exports.getSettings = async(req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM system_settings WHERE id = 1");
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching settings" });
+    }
+};
+
+// Update Global Settings
+exports.updateSettings = async(req, res) => {
+    try {
+        const { upi_id, min_withdraw, withdraw_fee, withdraw_status, deposit_status, maintenance_mode, announcement_text } = req.body;
+
+        const query = `
+            UPDATE system_settings 
+            SET upi_id = $1, min_withdraw = $2, withdraw_fee = $3, 
+                withdraw_status = $4, deposit_status = $5, 
+                maintenance_mode = $6, announcement_text = $7,
+                updated_at = NOW()
+            WHERE id = 1
+            RETURNING *;
+        `;
+
+        const values = [upi_id, min_withdraw, withdraw_fee, withdraw_status, deposit_status, maintenance_mode, announcement_text];
+        const result = await pool.query(query, values);
+
+        res.json({ success: true, message: "Settings updated", data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to update settings" });
+    }
+};

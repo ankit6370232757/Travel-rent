@@ -22,4 +22,7 @@ router.put("/packages/:id/status", authMiddleware, adminController.togglePackage
 router.delete("/packages/:id", authMiddleware, adminController.deletePackage);
 
 router.patch("/users/:id/status", authMiddleware, adminController.toggleUserStatus);
+
+router.get("/settings", authMiddleware, adminController.getSettings);
+router.post("/settings", authMiddleware, adminController.updateSettings);
 module.exports = router;
