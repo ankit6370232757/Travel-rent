@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, TrendingUp, Users, DollarSign, Activity, Zap } from "lucide-react";
+import { Menu, TrendingUp, Users, DollarSign, Activity, Zap, Bell, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
-import api from "../api/axios"; // 👈 Real Data Import
+import api from "../api/axios"; 
 
 import Sidebar from "../components/Sidebar";
 import ChatBot from "../components/ChatBot";
@@ -23,7 +23,7 @@ import AdminPanel from "../dashboard/AdminPanel";
 
 const LayoutWrapper = styled.div`
   min-height: 100vh;
-  background-color: #08080a; /* Deep premium dark background */
+  background-color: #08080a; 
   color: #fff;
   position: relative;
   overflow-x: hidden;
@@ -33,19 +33,38 @@ const LayoutWrapper = styled.div`
 
 const MainContent = styled.main`
   flex: 1;
-  margin-left: 280px; /* Exact width of Sidebar */
+  margin-left: 280px; 
   padding: 30px;
   min-height: 100vh;
   position: relative;
   z-index: 1;
-  width: calc(100% - 280px); /* Ensures content doesn't overflow horizontally */
+  width: calc(100% - 280px); 
   
   @media (max-width: 768px) {
     margin-left: 0;
     width: 100%;
     padding: 20px;
-    padding-top: 80px; /* Space for Mobile Top Bar */
+    padding-top: 80px; 
   }
+`;
+
+// 🟢 NEW: Announcement Banner Styled Component
+const Banner = styled(motion.div)`
+  background: linear-gradient(90deg, #3ea6ff 0%, #8e2de2 100%);
+  color: white;
+  padding: 14px 24px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 30px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 10px 25px rgba(62, 166, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 10;
 `;
 
 const BackgroundGlow = styled.div`
@@ -144,10 +163,9 @@ const DashboardGrid = styled.div`
 `;
 
 const GridItem = styled(motion.div)`
-  /* Layout Logic */
-  &.wallet-section { grid-column: span 4; } /* 33% width */
-  &.chart-section { grid-column: span 8; }  /* 66% width */
-  &.packages-section { grid-column: span 12; } /* Full width */
+  &.wallet-section { grid-column: span 4; } 
+  &.chart-section { grid-column: span 8; }  
+  &.packages-section { grid-column: span 12; } 
 
   @media (max-width: 1200px) {
     &.wallet-section { grid-column: span 12; }
@@ -158,13 +176,10 @@ const GridItem = styled(motion.div)`
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 50 } } };
 
-// --- OVERVIEW COMPONENT (With Real Data) ---
+// --- OVERVIEW COMPONENT ---
 const Overview = ({ user }) => {
   const [stats, setStats] = useState({
-    balance: 0,
-    totalEarnings: 0,
-    activePlans: 0,
-    totalReferrals: 0
+    balance: 0, totalEarnings: 0, activePlans: 0, totalReferrals: 0
   });
 
   useEffect(() => {
@@ -180,8 +195,7 @@ const Overview = ({ user }) => {
            });
         }
       } catch (error) {
-        console.error("Using default stats (API Error or Dev Mode)");
-        setStats({ balance: 0, totalEarnings: 0, activePlans: 0, totalReferrals: 0 }); 
+        console.error("Dashboard stats error", error);
       }
     };
     fetchStats();
@@ -204,7 +218,6 @@ const Overview = ({ user }) => {
               <strong>${stats.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
             </div>
          </StatCard>
-         
          <StatCard variants={itemVariants} $bg="rgba(46, 204, 113, 0.1)" $color="#2ecc71">
             <div className="icon-box"><TrendingUp size={24}/></div>
             <div className="info">
@@ -212,7 +225,6 @@ const Overview = ({ user }) => {
               <strong>${stats.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
             </div>
          </StatCard>
-         
          <StatCard variants={itemVariants} $bg="rgba(231, 76, 60, 0.1)" $color="#ff6b6b">
             <div className="icon-box"><Zap size={24}/></div>
             <div className="info">
@@ -220,7 +232,6 @@ const Overview = ({ user }) => {
               <strong>{stats.activePlans} Running</strong>
             </div>
          </StatCard>
-         
          <StatCard variants={itemVariants} $bg="rgba(142, 45, 226, 0.1)" $color="#8e2de2">
             <div className="icon-box"><Users size={24}/></div>
             <div className="info">
@@ -251,6 +262,10 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true); 
   
+  // 🟢 NEW: Announcement State
+  const [announcement, setAnnouncement] = useState("");
+  const [bannerVisible, setBannerVisible] = useState(true);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -262,52 +277,47 @@ export default function DashboardLayout() {
         const parsedData = JSON.parse(storedData);
         const realUser = parsedData.user || parsedData;
         setUser(realUser);
-
-        // 🛡️ INITIAL ROLE PROTECTION
-        // If user is admin and the default tab is dashboard, switch to admin overview
         if (realUser.role === 'admin' && activeTab === "dashboard") {
           setActiveTab("admin-overview");
         }
-      } catch (err) {
-        console.error("Error parsing user data", err);
-      }
+      } catch (err) { console.error(err); }
     }
   }, []);
 
-  // 2. 🛡️ URL Sync & ROLE PROTECTION
+  // 🟢 NEW: Fetch Announcement Data from Backend
+  useEffect(() => {
+    const fetchAnnouncement = async () => {
+      try {
+        const res = await api.get("/settings/announcement");
+        if (res.data && res.data.announcement_text) {
+          setAnnouncement(res.data.announcement_text);
+        }
+      } catch (err) {
+        console.error("Failed to fetch announcement", err);
+      }
+    };
+    fetchAnnouncement();
+  }, []);
+
+  // 🛡️ ROLE PROTECTION logic
   useEffect(() => {
     if (!user || !user.email) return; 
-
     if (user.role === 'admin') {
-       // If an admin somehow lands on "dashboard", force them to "admin-overview"
-       if (activeTab === "dashboard") {
-         setActiveTab("admin-overview");
-         return;
-       }
-       if (!activeTab.startsWith("admin-")) {
-          if (location.pathname !== '/admin') navigate('/admin');
-       }
-    } else {
-       if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
-         setActiveTab('dashboard');
-         navigate('/dashboard');
-       }
+       if (activeTab === "dashboard") setActiveTab("admin-overview");
+       if (!activeTab.startsWith("admin-") && location.pathname !== '/admin') navigate('/admin');
+    } else if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
+       setActiveTab('dashboard');
+       navigate('/dashboard');
     }
   }, [user, activeTab, location.pathname, navigate]);
 
-  // 3. Handle Tab Switching
   const handleTabChange = (tabId) => {
-    // If admin clicks a user-only tab, prevent it (optional safety)
     if (user.role === 'admin' && tabId === "dashboard") {
       setActiveTab("admin-overview");
       return;
     }
-
-    if (tabId.startsWith("admin-")) {
-       if (location.pathname !== '/admin') navigate('/admin');
-    } else {
-       if (location.pathname === '/admin') navigate('/dashboard');
-    }
+    if (tabId.startsWith("admin-")) { if (location.pathname !== '/admin') navigate('/admin'); } 
+    else { if (location.pathname === '/admin') navigate('/dashboard'); }
     setActiveTab(tabId);
     setSidebarOpen(false);
   };
@@ -320,25 +330,22 @@ export default function DashboardLayout() {
     }
   };
 
-  // Content Rendering Logic
   const renderContent = () => {
     if (activeTab.startsWith("admin-")) {
       const view = activeTab.replace("admin-", ""); 
       return <AdminPanel initialView={view} />;
     }
-
     switch (activeTab) {
       case "dashboard": 
-        // 🛡️ Final check: Never render Overview for Admin
         if (user.role === 'admin') return <AdminPanel initialView="overview" />;
         return <Overview user={user} />;
-      case "wallet":    return <Wallet />;
-      case "withdraw":  return <Withdraw />;
-      case "history":   return <History />; 
-      case "settings":  return <Settings />;
-      case "network":   return <Referrals />;
-      case "earnings":  return <Income />;
-      case "packages":  return <Packages />;
+      case "wallet":   return <Wallet />;
+      case "withdraw": return <Withdraw />;
+      case "history":  return <History />; 
+      case "settings": return <Settings />;
+      case "network":  return <Referrals />;
+      case "earnings": return <Income />;
+      case "packages": return <Packages />;
       default:          
         if (user.role === 'admin') return <AdminPanel initialView="overview" />;
         return <Overview user={user} />;
@@ -371,6 +378,28 @@ export default function DashboardLayout() {
       />
       
       <MainContent>
+        {/* 🟢 NEW: Integrated Announcement Banner */}
+        <AnimatePresence>
+          {announcement && bannerVisible && (
+            <Banner
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Bell size={20} />
+                <span>{announcement}</span>
+              </div>
+              <button 
+                onClick={() => setBannerVisible(false)}
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </Banner>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
