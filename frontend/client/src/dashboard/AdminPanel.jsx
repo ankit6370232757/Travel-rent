@@ -87,7 +87,7 @@ export default function AdminPanel({ initialView = "overview" }) {
 
   useEffect(() => { fetchData(); }, []);
 
-  // 2. HANDLE ACTIONS
+  // 2. HANDLE ACTIONS (Requests Approval/Rejection)
   const handleAction = async (id, type, action) => {
     const loadingToast = toast.loading(`Processing ${action}...`);
     try {
@@ -97,6 +97,29 @@ export default function AdminPanel({ initialView = "overview" }) {
       fetchData(); 
     } catch (err) {
       toast.error(err.response?.data?.message || "Action failed", { id: loadingToast });
+    }
+  };
+
+  // 🟢 3. HANDLE USER STATUS TOGGLE (Deactivate/Activate)
+  const handleToggleUserStatus = async (userId, currentIsActive) => {
+    const newStatus = !currentIsActive; // Flip the status
+    const loadingToast = toast.loading(`Updating user status...`);
+
+    try {
+      // API call to update database
+      await api.patch(`/admin/users/${userId}/status`, {
+        is_active: newStatus
+      });
+
+      toast.success(`User ${newStatus ? "Activated" : "Deactivated"} Successfully!`, { id: loadingToast });
+      
+      // Update local state to reflect change immediately in the table
+      setUsers(prevUsers => 
+        prevUsers.map(u => u.id === userId ? { ...u, is_active: newStatus } : u)
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update user status", { id: loadingToast });
+      console.error("Status Toggle Error:", err);
     }
   };
 
@@ -136,7 +159,12 @@ export default function AdminPanel({ initialView = "overview" }) {
         >
           {activeTab === "overview" && <AdminOverview stats={stats} bookings={bookings} />}
           {activeTab === "requests" && <AdminRequests requests={requests} onHandleAction={handleAction} />}
-          {activeTab === "users" && <AdminUsers users={users} />}
+          
+          {/* 🟢 Corrected: Passed handleToggleUserStatus as a prop */}
+          {activeTab === "users" && (
+            <AdminUsers users={users} onToggleStatus={handleToggleUserStatus} />
+          )}
+
           {activeTab === "settings" && <AdminSettings />}
           {activeTab === "packages" && <AdminPackages />}
           {activeTab === "finance" && <AdminFinance />}
