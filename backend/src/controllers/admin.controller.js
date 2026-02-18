@@ -235,16 +235,16 @@ exports.getAllRequests = async(req, res) => {
     try {
         const query = `
             SELECT 
-                id, user_id, amount, 'DEPOSIT' as type, 
-                status,          
-                created_at as date 
-            FROM deposits
+                d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, 
+                d.status, d.created_at as date 
+            FROM deposits d
+            JOIN users u ON d.user_id = u.id
             UNION ALL
             SELECT 
-                id, user_id, amount, 'WITHDRAW' as type, 
-                status,          
-                created_at as date 
-            FROM withdrawals
+                w.id, w.user_id, u.name as user_name, w.amount, 'WITHDRAW' as type, 
+                w.status, w.created_at as date 
+            FROM withdrawals w
+            JOIN users u ON w.user_id = u.id
             ORDER BY date DESC
         `;
         const result = await pool.query(query);
@@ -296,5 +296,24 @@ exports.handleRequest = async(req, res) => {
         res.status(500).json({ message: error.message });
     } finally {
         client.release();
+    }
+};
+exports.getPendingRequests = async(req, res) => {
+    try {
+        const deposits = await pool.query(
+            `SELECT d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, d.created_at 
+             FROM deposits d 
+             JOIN users u ON d.user_id = u.id 
+             WHERE d.status = 'PENDING'`
+        );
+        const withdrawals = await pool.query(
+            `SELECT w.id, w.user_id, u.name as user_name, w.amount, 'WITHDRAW' as type, w.created_at 
+             FROM withdrawals w 
+             JOIN users u ON w.user_id = u.id 
+             WHERE w.status = 'PENDING'`
+        );
+        res.json([...deposits.rows, ...withdrawals.rows]);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 };
