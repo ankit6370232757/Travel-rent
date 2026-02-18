@@ -379,3 +379,32 @@ exports.updateSettings = async(req, res) => {
         res.status(500).json({ message: "Failed to update settings" });
     }
 };
+// controllers/admin.controller.js
+
+exports.getAllPackages = async(req, res) => {
+    try {
+        // This query counts how many seats are 'OCCUPIED' for each package
+        // by joining the packages table with the seats table.
+        const query = `
+            SELECT 
+                p.*, 
+                COALESCE(s.occupied_count, 0) as filled_seats
+            FROM packages p
+            LEFT JOIN (
+                SELECT package_id, COUNT(*) as occupied_count 
+                FROM seats 
+                WHERE status = 'OCCUPIED' 
+                GROUP BY package_id
+            ) s ON p.id = s.package_id
+            ORDER BY p.id ASC
+        `;
+
+        const result = await pool.query(query);
+
+        // Return the rows to the frontend
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Error fetching package inventory:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
