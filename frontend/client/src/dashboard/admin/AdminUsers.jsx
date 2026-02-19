@@ -3,7 +3,8 @@ import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, Search, AlertCircle, FileSpreadsheet, 
-  ChevronLeft, ChevronRight, UserCheck, UserX 
+  ChevronLeft, ChevronRight, UserCheck, UserX, 
+  Eye, EyeOff, Lock, Copy, CheckCircle
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import toast from "react-hot-toast";
@@ -14,76 +15,122 @@ const Section = styled.div`
   background: rgba(255,255,255,0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
-  padding: 25px;
-  overflow-x: auto;
+  padding: 15px;
+  @media (min-width: 768px) { padding: 25px; }
 `;
 
-const TableContainer = styled.div`
-  width: 100%;
-`;
-
-const Table = styled.table`
-  width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 950px;
-  th { text-align: left; padding: 10px; color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-  td { padding: 15px 10px; color: #ddd; font-size: 14px; background: rgba(255,255,255,0.02); }
-  td:first-child { border-radius: 12px 0 0 12px; width: 60px; text-align: center; color: #555; font-weight: bold; }
-  td:last-child { border-radius: 0 12px 12px 0; }
-`;
-
-const Badge = styled.span`
-  padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
-  background: ${props => props.bg}; color: ${props => props.color};
-  text-transform: uppercase;
+const TopBar = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 25px;
+  @media (min-width: 1024px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 `;
 
 const SearchBar = styled.div`
   position: relative;
+  width: 100%;
+  @media (min-width: 768px) { max-width: 400px; }
+  
   input {
+    width: 100%;
     background: rgba(0,0,0,0.3); 
     border: 1px solid rgba(255,255,255,0.1);
-    padding: 10px 15px 10px 40px; 
-    border-radius: 10px; 
+    padding: 12px 15px 12px 45px; 
+    border-radius: 12px; 
     color: #fff; 
-    width: 300px;
     outline: none;
     transition: all 0.3s;
-    &:focus { border-color: #8e2de2; background: rgba(0,0,0,0.4); }
+    &:focus { border-color: #3ea6ff; background: rgba(0,0,0,0.4); }
   }
-  svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666; }
+  svg { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #666; }
 `;
 
-const ExportBtn = styled.button`
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(46, 204, 113, 0.1); color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.2);
-  padding: 10px 18px; border-radius: 12px;
-  font-weight: 600; font-size: 13px; cursor: pointer;
-  transition: all 0.3s ease;
-  &:hover { background: #2ecc71; color: #fff; }
+const TableContainer = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  display: none; 
+  @media (min-width: 1024px) { display: block; }
 `;
 
-const ToggleBtn = styled.button`
-  background: ${props => props.active ? 'rgba(231, 76, 60, 0.1)' : 'rgba(46, 204, 113, 0.1)'};
-  color: ${props => props.active ? '#e74c3c' : '#2ecc71'};
-  border: 1px solid ${props => props.active ? 'rgba(231, 76, 60, 0.2)' : 'rgba(46, 204, 113, 0.2)'};
-  padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; gap: 6px;
+const MobileGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  @media (min-width: 1024px) { display: none; }
+`;
+
+const MobileCard = styled.div`
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const Table = styled.table`
+  width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 1100px;
+  th { text-align: left; padding: 12px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  td { padding: 15px 12px; color: #ddd; font-size: 14px; background: rgba(255,255,255,0.02); }
+  td:first-child { border-radius: 12px 0 0 12px; width: 50px; text-align: center; }
+  td:last-child { border-radius: 0 12px 12px 0; }
+`;
+
+const PasswordWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #3ea6ff;
+  
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  button { 
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+    color: #888; cursor: pointer; padding: 5px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    &:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: #3ea6ff; }
+  }
+`;
+
+const Badge = styled.span`
+  padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: 700;
+  background: ${props => props.bg}; color: ${props => props.color};
+  text-transform: uppercase;
+`;
+
+const ActionBtn = styled.button`
+  background: ${props => props.$active ? 'rgba(231, 76, 60, 0.1)' : 'rgba(46, 204, 113, 0.1)'};
+  color: ${props => props.$active ? '#e74c3c' : '#2ecc71'};
+  border: 1px solid ${props => props.$active ? 'rgba(231, 76, 60, 0.2)' : 'rgba(46, 204, 113, 0.2)'};
+  padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 8px; width: fit-content;
   transition: all 0.2s ease;
-  &:hover { transform: scale(1.05); }
+  &:hover { background: ${props => props.$active ? '#e74c3c' : '#2ecc71'}; color: #fff; transform: translateY(-2px); }
 `;
 
 const PaginationWrapper = styled.div`
-  display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 25px;
-  span { color: #888; font-size: 14px; }
+  display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px;
+  span { color: #888; font-size: 13px; }
 `;
 
 const PageBtn = styled.button`
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
   color: #fff; width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.2s;
-  &:disabled { opacity: 0.3; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: #8e2de2; border-color: #8e2de2; }
+  &:disabled { opacity: 0.2; cursor: not-allowed; }
+  &:hover:not(:disabled) { background: #3ea6ff; border-color: #3ea6ff; }
 `;
 
 // --- COMPONENT ---
@@ -91,9 +138,22 @@ const PageBtn = styled.button`
 export default function AdminUsers({ users = [], onToggleStatus }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [visiblePasswords, setVisiblePasswords] = useState({}); 
   const itemsPerPage = 30;
 
-  // ✅ 1. Filtering Logic
+  const togglePassword = (id) => {
+    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleCopy = (text) => {
+    if (!text) return toast.error("No password to copy");
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard!", {
+        icon: '📋',
+        style: { background: '#111', color: '#fff', border: '1px solid #333' }
+    });
+  };
+
   const filteredUsers = useMemo(() => {
     setCurrentPage(1); 
     if (!searchTerm) return users;
@@ -105,165 +165,137 @@ export default function AdminUsers({ users = [], onToggleStatus }) {
     );
   }, [users, searchTerm]);
 
-  // ✅ 2. Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
-  // ✅ 3. Excel Export Logic
-  const handleExport = () => {
-    if (filteredUsers.length === 0) {
-      toast.error("No data to export");
-      return;
-    }
-    const exportData = filteredUsers.map((u, index) => ({
-      "SL No": index + 1,
-      "User ID": u.id,
-      "Name": u.name || "N/A",
-      "Email": u.email,
-      "Role": u.role,
-      "Balance": Number(u.balance || 0),
-      "Status": u.is_active !== false ? "Active" : "Deactivated",
-      "Joined Date": new Date(u.created_at).toLocaleDateString()
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Users List");
-    XLSX.writeFile(wb, `User_Management_${new Date().toLocaleDateString()}.xlsx`);
-    toast.success("Excel exported!");
-  };
-
-  // ✅ 4. Status Toggle Wrapper (Fixes "Not a function" error)
-  const handleToggle = (id, currentStatus) => {
-    if (typeof onToggleStatus === 'function') {
-      onToggleStatus(id, currentStatus);
-    } else {
-      console.error("Critical: onToggleStatus prop missing in parent component.");
-      toast.error("Status update functionality not linked.");
-    }
-  };
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <Section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', gap: '20px', flexWrap: 'wrap' }}>
+        <TopBar>
           <div>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
-              <Users size={20} color="#8e2de2" /> User Management
+              <Users size={22} color="#3ea6ff" /> User Management
             </h3>
-            <div style={{fontSize: '12px', color: '#666', marginTop: '5px'}}>
-              Showing {filteredUsers.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredUsers.length)} of {filteredUsers.length} Users
-            </div>
+            <p style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>Database contains {filteredUsers.length} total users</p>
           </div>
           
-          <div style={{ display: 'flex', gap: '15px' }}>
+          <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '500px' }}>
             <SearchBar>
               <Search size={18} />
               <input 
-                placeholder="Search name, email, or ID..." 
+                placeholder="Search by ID, Name, or Email..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </SearchBar>
-            <ExportBtn onClick={handleExport}>
-              <FileSpreadsheet size={18} /> Export
-            </ExportBtn>
           </div>
-        </div>
+        </TopBar>
 
+        {/* 💻 DESKTOP TABLE VIEW */}
         <TableContainer>
           <Table>
             <thead>
               <tr>
                 <th># SL</th>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
+                <th>UID</th>
+                <th>Full Name</th>
+                <th>Plain Password</th>
+                <th>Email Address</th>
                 <th>Role</th>
                 <th>Balance</th>
-                <th>Joined Date</th>
+                <th>Joined</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              <AnimatePresence mode="popLayout">
-                {currentItems.length > 0 ? (
-                  currentItems.map((u, index) => (
-                    <motion.tr 
-                      key={u.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      layout
-                    >
-                      <td>{indexOfFirstItem + index + 1}</td>
-                      <td style={{ color: '#666' }}>#{u.id}</td>
-                      <td style={{ fontWeight: 'bold', color: u.is_active === false ? '#ff4d4d' : '#fff' }}>
-                        {u.name || "Unknown"} {u.is_active === false && " (Disabled)"}
-                      </td>
-                      <td>{u.email}</td>
-                      <td>
-                        <Badge 
-                          bg={u.role === 'admin' ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'} 
-                          color={u.role === 'admin' ? '#e74c3c' : '#2ecc71'}
-                        >
-                          {u.role}
-                        </Badge>
-                      </td>
-                      <td style={{ color: '#fff', fontWeight: 'bold' }}>
-                        ${Number(u.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td>
-                        <div style={{ color: '#ddd' }}>{new Date(u.created_at).toLocaleDateString()}</div>
-                        <div style={{ fontSize: '11px', color: '#666' }}>{new Date(u.created_at).toLocaleTimeString()}</div>
-                      </td>
-                      <td>
-                        <ToggleBtn 
-                          active={u.is_active === false} 
-                          onClick={() => handleToggle(u.id, u.is_active !== false)}
-                        >
-                          {u.is_active !== false ? (
-                            <><UserX size={14}/> Deactivate</>
-                          ) : (
-                            <><UserCheck size={14}/> Activate</>
-                          )}
-                        </ToggleBtn>
-                      </td>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" style={{ textAlign: 'center', padding: '60px', color: '#666' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                         <AlertCircle size={30} color="#444" />
-                         <span>No users found.</span>
+              {currentItems.map((u, index) => (
+                <tr key={u.id}>
+                  <td>{indexOfFirstItem + index + 1}</td>
+                  <td style={{ color: '#888', fontWeight: 'bold' }}>{u.id}</td>
+                  <td style={{ color: u.is_active === false ? '#ff4d4d' : '#fff', fontWeight: '600' }}>
+                    {u.name || "N/A"}
+                  </td>
+                  <td>
+                    <PasswordWrapper>
+                      <Lock size={12} style={{opacity: 0.3}} />
+                      <span style={{minWidth: '85px', fontSize: '13px'}}>
+                        {visiblePasswords[u.id] ? u.password : "••••••••"}
+                      </span>
+                      <div className="controls">
+                        <button onClick={() => togglePassword(u.id)} title="Show/Hide">
+                            {visiblePasswords[u.id] ? <EyeOff size={14}/> : <Eye size={14}/>}
+                        </button>
+                        <button onClick={() => handleCopy(u.password)} title="Copy Plaintext">
+                            <Copy size={14}/>
+                        </button>
                       </div>
-                    </td>
-                  </tr>
-                )}
-              </AnimatePresence>
+                    </PasswordWrapper>
+                  </td>
+                  <td style={{ fontSize: '13px' }}>{u.email}</td>
+                  <td>
+                    <Badge bg={u.role === 'admin' ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'} color={u.role === 'admin' ? '#e74c3c' : '#2ecc71'}>
+                      {u.role}
+                    </Badge>
+                  </td>
+                  <td style={{ color: '#fff', fontWeight: 'bold' }}>${Number(u.balance || 0).toFixed(2)}</td>
+                  <td style={{ fontSize: '12px', color: '#666' }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <ActionBtn $active={u.is_active === false} onClick={() => onToggleStatus(u.id, u.is_active !== false)}>
+                      {u.is_active !== false ? <><UserX size={14}/> Disable</> : <><UserCheck size={14}/> Enable</>}
+                    </ActionBtn>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </Table>
         </TableContainer>
 
-        {/* ✅ 5. Pagination Controls */}
+        {/* 📱 MOBILE CARD VIEW */}
+        <MobileGrid>
+          {currentItems.map((u) => (
+            <MobileCard key={u.id}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'start'}}>
+                <div>
+                  <div style={{fontWeight: 'bold', fontSize: '15px', color: u.is_active === false ? '#ff4d4d' : '#fff'}}>{u.name}</div>
+                  <div style={{fontSize: '11px', color: '#888', marginTop: '2px'}}>UID: {u.id} • {u.email}</div>
+                </div>
+                <Badge bg={u.role === 'admin' ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'} color={u.role === 'admin' ? '#e74c3c' : '#2ecc71'}>
+                  {u.role}
+                </Badge>
+              </div>
+              
+              <div style={{background: 'rgba(0,0,0,0.2)', padding: '12px', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                 <span style={{fontSize: '11px', color: '#666', textTransform: 'uppercase', fontWeight: 700}}>Password</span>
+                 <PasswordWrapper>
+                    <span style={{fontSize: '14px'}}>{visiblePasswords[u.id] ? u.password : "••••••••"}</span>
+                    <div className="controls">
+                        <button onClick={() => togglePassword(u.id)}><Eye size={14}/></button>
+                        <button onClick={() => handleCopy(u.password)}><Copy size={14}/></button>
+                    </div>
+                 </PasswordWrapper>
+              </div>
+
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px'}}>
+                <div style={{fontWeight: 'bold', color: '#2ecc71', fontSize: '16px'}}>${Number(u.balance || 0).toFixed(2)}</div>
+                <ActionBtn $active={u.is_active === false} onClick={() => onToggleStatus(u.id, u.is_active !== false)}>
+                  {u.is_active !== false ? <><UserX size={14}/> Ban</> : <><UserCheck size={14}/> Unban</>}
+                </ActionBtn>
+              </div>
+            </MobileCard>
+          ))}
+        </MobileGrid>
+
+        {/* 🔢 PAGINATION */}
         {totalPages > 1 && (
           <PaginationWrapper>
-            <PageBtn 
-              disabled={currentPage === 1} 
-              onClick={() => setCurrentPage(prev => prev - 1)}
-            >
-              <ChevronLeft size={20} />
+            <PageBtn disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                <ChevronLeft size={18}/>
             </PageBtn>
-            
             <span>Page <b>{currentPage}</b> of <b>{totalPages}</b></span>
-            
-            <PageBtn 
-              disabled={currentPage === totalPages} 
-              onClick={() => setCurrentPage(prev => prev + 1)}
-            >
-              <ChevronRight size={20} />
+            <PageBtn disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                <ChevronRight size={18}/>
             </PageBtn>
           </PaginationWrapper>
         )}
