@@ -1,18 +1,37 @@
-const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
+
+/**
+ * 🛠️ Utility: Generate a Unique 6-Digit ID
+ */
+const generateSixDigitId = async(tableName) => {
+    let isUnique = false;
+    let newId;
+
+    while (!isUnique) {
+        // Generate random number between 100000 and 999999
+        newId = Math.floor(100000 + Math.random() * 900000);
+
+        // Check if ID already exists in the table
+        const res = await pool.query(`SELECT id FROM ${tableName} WHERE id = $1`, [newId]);
+        if (res.rows.length === 0) {
+            isUnique = true;
+        }
+    }
+    return newId;
+};
 
 exports.register = async(req, res) => {
     try {
         const { name, email, password, referralCode, phoneNumber } = req.body;
 
-        // Validation
+        // 1. Validation
         if (!name || !email || !password || !phoneNumber) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
-        // Check existing user
+        // 2. Check existing user (Email OR Phone)
         const userExists = await pool.query(
             "SELECT id FROM users WHERE email = $1 OR phone_number = $2", [email, phoneNumber]
         );
@@ -21,7 +40,7 @@ exports.register = async(req, res) => {
             return res.status(400).json({ message: "Email or Phone already registered" });
         }
 
-        // Find referrer
+        // 3. Find referrer (if code provided)
         let referredBy = null;
         if (referralCode) {
             const refUser = await pool.query(
@@ -32,21 +51,27 @@ exports.register = async(req, res) => {
             }
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // 4. 🟢 Generate 6-Digit unique ID
+        const userId = await generateSixDigitId('users');
+
+        // 5. Generate unique referral code
         const myReferralCode = uuidv4().slice(0, 8).toUpperCase();
 
-        // 🟢 Insert user with is_active = TRUE by default
-        const newUser = await pool.query(
-            `INSERT INTO users (name, email, password, referral_code, referred_by, phone_number, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING id`, [name, email, hashedPassword, myReferralCode, referredBy, phoneNumber]
+        // 6. 🟢 Insert user (Storing Plaintext Password as requested)
+        await pool.query(
+            `INSERT INTO users (id, name, email, password, referral_code, referred_by, phone_number, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)`, [userId, name, email, password, myReferralCode, referredBy, phoneNumber]
         );
 
+        // 7. Create wallet for new user
         await pool.query(
-            "INSERT INTO wallets (user_id, balance) VALUES ($1, 0)", [newUser.rows[0].id]
+            "INSERT INTO wallets (user_id, balance) VALUES ($1, 0)", [userId]
         );
 
         res.status(201).json({
+            success: true,
             message: "User registered successfully",
+            userId: userId, // Returned for the "Flower Blossom" animation
             referralCode: myReferralCode
         });
 
@@ -58,11 +83,16 @@ exports.register = async(req, res) => {
 
 exports.login = async(req, res) => {
     try {
-        const { email, password } = req.body;
+        // 🟢 'identifier' can be either email or phoneNumber from the frontend
+        const { identifier, password } = req.body;
 
-        // 1. Get User including is_active status
+        if (!identifier || !password) {
+            return res.status(400).json({ message: "Email/Phone and password are required" });
+        }
+
+        // 1. 🟢 Get User by Email OR Phone Number
         const userRes = await pool.query(
-            "SELECT * FROM users WHERE email = $1", [email]
+            "SELECT * FROM users WHERE email = $1 OR phone_number = $1", [identifier]
         );
 
         if (userRes.rows.length === 0) {
@@ -71,16 +101,15 @@ exports.login = async(req, res) => {
 
         const user = userRes.rows[0];
 
-        // 🟢 2. Security Check: Block deactivated users
+        // 2. Security Check: Block deactivated users
         if (user.is_active === false) {
             return res.status(403).json({
                 message: "Your account has been deactivated. Please contact support."
             });
         }
 
-        // 3. Check Password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
+        // 3. 🟢 Check Password (Direct comparison for plaintext)
+        if (password !== user.password) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
@@ -121,8 +150,7 @@ exports.getDashboardStats = async(req, res) => {
         );
 
         const myReferralCode = (userQuery.rows && userQuery.rows.length > 0) ?
-            userQuery.rows[0].referral_code :
-            null;
+            userQuery.rows[0].referral_code : null;
 
         const [balanceRes, profitRes, plansRes, networkRes] = await Promise.all([
             pool.query("SELECT balance FROM wallets WHERE user_id = $1", [userId]),
