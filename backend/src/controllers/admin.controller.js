@@ -57,16 +57,15 @@ exports.handleRequest = async(req, res) => {
 };
 exports.getAllUsers = async(req, res) => {
     try {
+        // 🟢 Ensure 'password' is explicitly selected here
         const query = `
-            SELECT u.id, u.name, u.email, u.role, u.created_at, w.balance 
-            FROM users u 
-            LEFT JOIN wallets w ON u.id = w.user_id 
-            ORDER BY u.id DESC
+            SELECT id, name, email, password, role, is_active, created_at 
+            FROM users 
+            ORDER BY created_at DESC
         `;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
-        console.error(err);
         res.status(500).json({ message: "Failed to fetch users" });
     }
 };
