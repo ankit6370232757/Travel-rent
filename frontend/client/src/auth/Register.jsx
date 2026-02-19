@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { User, Mail, Lock, Tag, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { User, Mail, Lock, Tag, UserPlus, CheckCircle, Copy, X } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import confetti from "canvas-confetti"; // 👈 npm install canvas-confetti
 
-// 👇 Import Phone Input
+// Phone Input
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
@@ -51,86 +52,86 @@ const Input = styled.input`
   &:focus { border-color: #2ecc71; background-color: rgba(0, 0, 0, 0.5); }
 `;
 
-/* 🎨 CUSTOM STYLES FOR PHONE INPUT TO MATCH DARK THEME */
 const PhoneWrapper = styled.div`
   width: 100%;
-  
   .react-tel-input .form-control {
-    width: 100% !important;
-    height: 48px !important;
+    width: 100% !important; height: 48px !important;
     background-color: rgba(0, 0, 0, 0.3) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 12px !important;
-    color: #fff !important;
-    padding-left: 58px !important; /* Make room for flag */
+    border-radius: 12px !important; color: #fff !important;
+    padding-left: 58px !important;
   }
-
   .react-tel-input .flag-dropdown {
-    background-color: transparent !important;
-    border: none !important;
+    background-color: transparent !important; border: none !important;
     border-right: 1px solid rgba(255,255,255,0.1) !important;
     border-radius: 12px 0 0 12px !important;
   }
-
-  .react-tel-input .selected-flag:hover, 
-  .react-tel-input .selected-flag:focus {
-    background-color: rgba(255,255,255,0.05) !important;
-  }
-  
-  /* Dropdown List Styling */
-  .react-tel-input .country-list {
-    background-color: #1a1a1a !important;
-    color: #fff !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-  }
-  .react-tel-input .country-list .country:hover {
-    background-color: #333 !important;
-  }
-  .react-tel-input .country-list .country.highlight {
-    background-color: #2ecc71 !important;
-  }
+  .react-tel-input .country-list { background-color: #1a1a1a !important; color: #fff !important; }
 `;
 
 const Button = styled(motion.button)`
   background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: #fff; border: none; 
   border-radius: 12px; padding: 14px; font-weight: 700; font-size: 16px; cursor: pointer; 
   display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; 
-  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); transition: box-shadow 0.2s; 
-  &:hover { box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4); }
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); 
   &:disabled { opacity: 0.7; cursor: not-allowed; }
 `;
 
 const Footer = styled.div` 
   text-align: center; font-size: 14px; color: #666; margin-top: 10px; 
-  a { color: #2ecc71; text-decoration: none; font-weight: 600; margin-left: 5px; &:hover { text-decoration: underline; } } 
+  a { color: #2ecc71; text-decoration: none; font-weight: 600; margin-left: 5px; } 
+`;
+
+// 🌸 SUCCESS MODAL STYLES
+const ModalOverlay = styled(motion.div)`
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center; z-index: 2000;
+`;
+
+const ModalContent = styled(motion.div)`
+  background: #111; border: 1px solid #2ecc71; border-radius: 24px;
+  padding: 40px; width: 90%; max-width: 400px; text-align: center;
+`;
+
+const IdDisplay = styled.div`
+  background: rgba(46, 204, 113, 0.1); border: 2px dashed #2ecc71;
+  padding: 15px; border-radius: 12px; margin: 20px 0;
+  font-size: 32px; font-weight: 800; letter-spacing: 4px; color: #fff;
 `;
 
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "", referralCode: "" });
-  const [phone, setPhone] = useState(""); // 👈 Phone State
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successData, setSuccessData] = useState(null); // 🟢 Store 6-digit ID
   const navigate = useNavigate();
 
+  // 🌸 Flower Blossom Celebration
+  const triggerBlossom = () => {
+    const end = Date.now() + 3 * 1000;
+    const colors = ["#2ecc71", "#ffffff", "#27ae60"];
+    (function frame() {
+      confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors });
+      confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    }());
+  };
+
   const submit = async () => {
-    // 1. Validation
     if (!form.name || !form.email || !form.password || !phone) {
       return toast.error("Please fill in all required fields");
     }
-    
     setLoading(true);
     const loadingToast = toast.loading("Creating your account...");
 
     try {
-      // 2. Prepare Data (Include phoneNumber)
-      const payload = {
-        ...form,
-        phoneNumber: phone // 👈 Add phone to payload
-      };
-
-      await api.post("/auth/register", payload);
+      const payload = { ...form, phoneNumber: phone };
+      const res = await api.post("/auth/register", payload); // 🟢 Backend now returns userId
       
-      toast.success("Registered successfully! Please login.", { id: loadingToast });
-      navigate("/login");
+      toast.success("Account Created Successfully!", { id: loadingToast });
+      setSuccessData(res.data.userId); // Save 6-digit ID to show in modal
+      triggerBlossom();
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Registration failed";
       toast.error(errorMessage, { id: loadingToast });
@@ -144,76 +145,65 @@ export default function Register() {
       <GlassCard
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.5 }}
       >
         <Header>
           <Logo>Travel<span>Rent</span></Logo>
-          <Subtitle>Create a new account to start investing.</Subtitle>
+          <Subtitle>Join the community and start earning.</Subtitle>
         </Header>
 
-        {/* Name */}
         <InputGroup>
-          <Input 
-            placeholder="Full Name" 
-            value={form.name} 
-            onChange={e => setForm({ ...form, name: e.target.value })} 
-          />
+          <Input placeholder="Full Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           <IconWrapper><User size={18} /></IconWrapper>
         </InputGroup>
 
-        {/* Email */}
         <InputGroup>
-          <Input 
-            placeholder="Email Address" 
-            type="email" 
-            value={form.email} 
-            onChange={e => setForm({ ...form, email: e.target.value })} 
-          />
+          <Input placeholder="Email Address" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           <IconWrapper><Mail size={18} /></IconWrapper>
         </InputGroup>
 
-        {/* 📱 Phone Number Input */}
         <InputGroup>
           <PhoneWrapper>
-            <PhoneInput
-              country={'in'} // Default Country (e.g., India)
-              value={phone}
-              onChange={phone => setPhone(phone)}
-              enableSearch={true}
-              placeholder="Mobile Number"
-              buttonStyle={{ backgroundColor: 'transparent', border: 'none' }}
-            />
+            <PhoneInput country={'in'} value={phone} onChange={val => setPhone(val)} enableSearch={true} placeholder="Mobile Number" />
           </PhoneWrapper>
         </InputGroup>
 
-        {/* Password */}
         <InputGroup>
-          <Input 
-            type="password" 
-            placeholder="Password" 
-            value={form.password} 
-            onChange={e => setForm({ ...form, password: e.target.value })} 
-          />
+          <Input type="password" placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
           <IconWrapper><Lock size={18} /></IconWrapper>
         </InputGroup>
 
-        {/* Referral */}
         <InputGroup>
-          <Input 
-            placeholder="Referral Code (Optional)" 
-            value={form.referralCode} 
-            onChange={e => setForm({ ...form, referralCode: e.target.value })} 
-          />
+          <Input placeholder="Referral Code (Optional)" value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value })} />
           <IconWrapper><Tag size={18} /></IconWrapper>
         </InputGroup>
         
-        <Button onClick={submit} whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.02 }} disabled={loading}>
-          {loading ? "Creating Account..." : "Register Now"}
+        <Button onClick={submit} whileTap={{ scale: 0.98 }} disabled={loading}>
+          {loading ? "Processing..." : "Create Account"}
           {!loading && <UserPlus size={20} />}
         </Button>
         
-        <Footer>Already have an account? <Link to="/login">Login Here</Link></Footer>
+        <Footer>Already joined? <Link to="/login">Login Here</Link></Footer>
       </GlassCard>
+
+      {/* 🌸 SUCCESS MODAL FOR 6-DIGIT ID */}
+      <AnimatePresence>
+        {successData && (
+          <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ModalContent initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+              <CheckCircle size={60} color="#2ecc71" style={{ marginBottom: 20 }} />
+              <h2 style={{ color: '#fff', margin: '0 0 10px 0' }}>Welcome Aboard!</h2>
+              <p style={{ color: '#888', fontSize: '14px' }}>Please save your unique 6-digit User ID for login and security purposes.</p>
+              
+              <IdDisplay>{successData}</IdDisplay>
+              
+              <Button onClick={() => navigate("/login")} style={{ width: '100%' }}>
+                Continue to Login <X size={16} />
+              </Button>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
     </Container>
   );
 }

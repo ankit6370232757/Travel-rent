@@ -2,56 +2,30 @@ import React, { useState, useContext } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { User, Lock, ArrowRight } from "lucide-react"; // Switched Mail to User icon for flexibility
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 import toast from "react-hot-toast"; 
 
-// --- STYLED COMPONENTS (No Changes) ---
+// --- STYLED COMPONENTS (No Changes for UI Consistency) ---
 const Container = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #050505;
-  z-index: 1000;
-  overflow: hidden;
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background-color: #050505; z-index: 1000; overflow: hidden;
 `;
 
 const BackgroundGlow = styled.div`
-  position: absolute;
-  width: 60vw;
-  height: 60vw;
-  max-width: 800px;
-  max-height: 800px;
+  position: absolute; width: 60vw; height: 60vw; max-width: 800px; max-height: 800px;
   background: radial-gradient(circle, rgba(62, 166, 255, 0.08) 0%, rgba(0,0,0,0) 70%);
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 0;
-  pointer-events: none;
+  border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 0; pointer-events: none;
 `;
 
 const GlassCard = styled(motion.div)`
-  background: rgba(30, 30, 30, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 50px 40px;
-  border-radius: 24px;
-  width: 90%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
-  position: relative;
-  z-index: 1;
+  background: rgba(30, 30, 30, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08); padding: 50px 40px; border-radius: 24px;
+  width: 90%; max-width: 420px; display: flex; flex-direction: column; gap: 25px;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6); position: relative; z-index: 1;
 `;
 
 const Header = styled.div` text-align: center; margin-bottom: 10px; `;
@@ -65,20 +39,21 @@ const Footer = styled.div` text-align: center; font-size: 14px; color: #666; mar
 
 export default function Login() {
   const { login } = useContext(AuthContext);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // 🟢 Supports Email or Phone
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
     // Basic Validation
-    if(!email || !password) return toast.error("Please fill in all fields");
+    if(!identifier || !password) return toast.error("Please enter your Email/Phone and Password");
     
     setLoading(true);
-    const loadingToast = toast.loading("Signing in...");
+    const loadingToast = toast.loading("Verifying credentials...");
 
     try {
-      const res = await api.post("/auth/login", { email, password });
+      // 🟢 Sends "identifier" to backend to check both email and phone_number columns
+      const res = await api.post("/auth/login", { identifier, password });
       
       // 1. Save Login Data to Context & LocalStorage
       login(res.data);
@@ -87,7 +62,6 @@ export default function Login() {
       toast.success("Login Successful!", { id: loadingToast });
 
       // 3. ✅ Role-Based Redirection
-      // If user is Admin, go to Admin Panel. Else, go to Dashboard.
       if (res.data.user.role === "admin") {
         navigate("/admin");
       } else {
@@ -96,7 +70,7 @@ export default function Login() {
 
     } catch (err) {
       console.error(err);
-      const errorMessage = err.response?.data?.message || "Invalid email or password";
+      const errorMessage = err.response?.data?.message || "Invalid credentials provided";
       toast.error(errorMessage, { id: loadingToast });
       setLoading(false);
     }
@@ -112,18 +86,20 @@ export default function Login() {
       >
         <Header>
           <Logo>Travel<span>Rent</span></Logo>
-          <Subtitle>Welcome back! Please login to continue.</Subtitle>
+          <Subtitle>Access your account via Email or Mobile Number</Subtitle>
         </Header>
+
         <InputGroup>
           <Input 
-            placeholder="Email Address" 
-            type="email" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
+            placeholder="Email or Mobile Number" 
+            type="text" 
+            value={identifier} 
+            onChange={(e) => setIdentifier(e.target.value)} 
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()} 
           />
-          <IconWrapper><Mail size={18} /></IconWrapper>
+          <IconWrapper><User size={18} /></IconWrapper>
         </InputGroup>
+
         <InputGroup>
           <Input 
             type="password" 
@@ -142,11 +118,11 @@ export default function Login() {
           disabled={loading} 
           style={{ opacity: loading ? 0.7 : 1 }}
         >
-          {loading ? "Signing In..." : "Login"}
+          {loading ? "Authorizing..." : "Login"}
           {!loading && <ArrowRight size={20} />}
         </Button>
         
-        <Footer>Don't have an account? <Link to="/register">Create Account</Link></Footer>
+        <Footer>Don't have an account? <Link to="/register">Register Now</Link></Footer>
       </GlassCard>
     </Container>
   );
