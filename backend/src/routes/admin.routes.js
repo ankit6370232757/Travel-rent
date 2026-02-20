@@ -25,4 +25,6 @@ router.patch("/users/:id/status", authMiddleware, adminController.toggleUserStat
 
 router.get("/settings", authMiddleware, adminController.getSettings);
 router.post("/settings", authMiddleware, adminController.updateSettings);
+
+router.get("/finance/all-logs", authMiddleware, adminController.getAllFinanceLogs);
 module.exports = router;

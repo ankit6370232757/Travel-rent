@@ -439,3 +439,80 @@ exports.getAllPackages = async(req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+// File: controllers/admin.controller.js
+const pool = require("../config/db");
+
+exports.getAllFinanceLogs = async(req, res) => {
+    try {
+        // 🟢 Optimized query using a CTE (Common Table Expression) for better performance
+        const query = `
+            WITH combined_logs AS (
+                -- 1. Get all Deposits
+                SELECT 
+                    id AS txn_id, 
+                    user_id, 
+                    'DEPOSIT' AS type, 
+                    amount, 
+                    status, 
+                    created_at 
+                FROM deposits
+                
+                UNION ALL
+                
+                -- 2. Get all Withdrawals
+                SELECT 
+                    id AS txn_id, 
+                    user_id, 
+                    'WITHDRAW' AS type, 
+                    amount, 
+                    status, 
+                    created_at 
+                FROM withdrawals
+                
+                UNION ALL
+                
+                -- 3. Get all Income (ROI and Referral)
+                SELECT 
+                    id AS txn_id, 
+                    user_id, 
+                    type, 
+                    amount, 
+                    'Success' AS status, 
+                    created_at 
+                FROM income_logs
+            )
+            SELECT 
+                cl.*, 
+                u.name AS user_full_name
+            FROM combined_logs cl
+            -- 🟢 Joining on u.id ensures we get the correct 6-digit ID match
+            INNER JOIN users u ON u.id = cl.user_id
+            ORDER BY cl.created_at DESC;
+        `;
+
+        const result = await pool.query(query);
+
+        // 🟢 Mapping logic ensuring keys match AdminFinance.jsx expectations
+        const formattedData = result.rows.map(row => ({
+            txn_id: row.txn_id,
+            user_id: row.user_id, // This is the 6-digit ID from image_1ef63d.png
+            user_name: row.user_full_name, // Full name from users table
+            type: row.type, // DEPOSIT, WITHDRAW, ROI_CREDIT, etc.
+            amount: Number(row.amount), // Ensure it is a number for frontend calculations
+            status: row.status, // Pending, Success, etc.
+            created_at: row.created_at
+        }));
+
+        res.json(formattedData);
+    } catch (err) {
+        // Detailed logging for backend debugging
+        console.error("Critical Finance Log Error:", {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json({
+            success: false,
+            message: "Failed to compile global financial ledger"
+        });
+    }
+};
