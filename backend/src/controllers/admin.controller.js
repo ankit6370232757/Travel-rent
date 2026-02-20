@@ -441,12 +441,11 @@ exports.getAllPackages = async(req, res) => {
 };
 exports.getAllFinanceLogs = async(req, res) => {
     try {
-        // 🟢 Optimized query using a CTE (Common Table Expression) for better performance
         const query = `
             WITH combined_logs AS (
-                -- 1. Get all Deposits
+                -- 1. Deposits (Confirmed columns: id, user_id, amount, status, created_at)
                 SELECT 
-                    id AS txn_id, 
+                    id::text AS txn_id, 
                     user_id, 
                     'DEPOSIT' AS type, 
                     amount, 
@@ -456,9 +455,9 @@ exports.getAllFinanceLogs = async(req, res) => {
                 
                 UNION ALL
                 
-                -- 2. Get all Withdrawals
+                -- 2. Withdrawals (Confirmed columns: id, user_id, amount, status, created_at)
                 SELECT 
-                    id AS txn_id, 
+                    id::text AS txn_id, 
                     user_id, 
                     'WITHDRAW' AS type, 
                     amount, 
@@ -468,11 +467,11 @@ exports.getAllFinanceLogs = async(req, res) => {
                 
                 UNION ALL
                 
-                -- 3. Get all Income (ROI and Referral)
+                -- 3. Income Logs (Fixed: income_type used instead of type)
                 SELECT 
-                    id AS txn_id, 
+                    id::text AS txn_id, 
                     user_id, 
-                    type, 
+                    income_type AS type, -- 🟢 Corrected based on image_d20408.png
                     amount, 
                     'Success' AS status, 
                     created_at 
@@ -482,34 +481,31 @@ exports.getAllFinanceLogs = async(req, res) => {
                 cl.*, 
                 u.name AS user_full_name
             FROM combined_logs cl
-            -- 🟢 Joining on u.id ensures we get the correct 6-digit ID match
+            -- 🟢 Joining on u.id (Confirmed as primary key in image_d207ad.png)
             INNER JOIN users u ON u.id = cl.user_id
             ORDER BY cl.created_at DESC;
         `;
 
         const result = await pool.query(query);
 
-        // 🟢 Mapping logic ensuring keys match AdminFinance.jsx expectations
         const formattedData = result.rows.map(row => ({
             txn_id: row.txn_id,
-            user_id: row.user_id, // This is the 6-digit ID from image_1ef63d.png
-            user_name: row.user_full_name, // Full name from users table
-            type: row.type, // DEPOSIT, WITHDRAW, ROI_CREDIT, etc.
-            amount: Number(row.amount), // Ensure it is a number for frontend calculations
-            status: row.status, // Pending, Success, etc.
+            user_id: row.user_id, // This is your 6-digit integer ID
+            user_name: row.user_full_name || "Unknown User",
+            type: row.type, // Will show DEPOSIT, WITHDRAW, or the value from income_type
+            amount: parseFloat(row.amount) || 0,
+            status: row.status,
             created_at: row.created_at
         }));
 
         res.json(formattedData);
     } catch (err) {
-        // Detailed logging for backend debugging
-        console.error("Critical Finance Log Error:", {
+        // Detailed logging for Render debugging
+        console.error("FINANCE LEDGER CRASH:", {
             message: err.message,
-            stack: err.stack
+            detail: err.detail,
+            table_mismatch: "Check if all UNIONed columns match data types"
         });
-        res.status(500).json({
-            success: false,
-            message: "Failed to compile global financial ledger"
-        });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
