@@ -439,9 +439,6 @@ exports.getAllPackages = async(req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
-// File: controllers/admin.controller.js
-const pool = require("../config/db");
-
 exports.getAllFinanceLogs = async(req, res) => {
     try {
         // 🟢 Optimized query using a CTE (Common Table Expression) for better performance
