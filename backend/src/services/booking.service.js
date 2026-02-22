@@ -60,10 +60,17 @@ exports.bookSeat = async(userId, packageName, incomeType) => { // 👈 Added inc
             "SELECT COUNT(*) FROM seats WHERE package_id = $1 AND status = 'OCCUPIED'", [pkg.id]
         );
         const totalOccupied = parseInt(countRes.rows[0].count);
-        const currentBatch = Math.floor(totalOccupied / BATCH_SIZE) + 1;
 
-        // 6️⃣ Assign seat (Fixed status and added income data)
-        // We change status to 'OCCUPIED' so income.service.js can see it
+        // ⚠️ Numeric Safety for Batch Size
+        const batchSize = Number(pkg.total_seats) || 180;
+        const currentBatch = Math.floor(totalOccupied / batchSize) + 1;
+
+        // 6️⃣ Assign seat (Fixed status and added forced numeric income data)
+        // Ensure values are numbers to prevent "0.00" database errors
+        const dIncome = Number(pkg.daily_income) || 0;
+        const mIncome = Number(pkg.monthly_income) || 0;
+        const yIncome = Number(pkg.yearly_income) || 0;
+
         await client.query(
             `UPDATE seats
              SET user_id = $1,
@@ -77,11 +84,11 @@ exports.bookSeat = async(userId, packageName, incomeType) => { // 👈 Added inc
              WHERE id = $2`, [
                 userId,
                 seat.id,
-                incomeType || 'DAILY', // Default to DAILY if not provided
+                incomeType || 'DAILY',
                 currentBatch,
-                pkg.daily_income, // Saving rates directly to seat
-                pkg.monthly_income,
-                pkg.yearly_income
+                dIncome, // 🟢 Forced numeric value
+                mIncome, // 🟢 Forced numeric value
+                yIncome // 🟢 Forced numeric value
             ]
         );
 
