@@ -2,9 +2,7 @@ const pool = require("../config/db");
 
 /**
  * 🟢 RUN DAILY INCOME
- * Logic: Runs every 24h. 
- * Condition 1: Pays ONLY if the specific BATCH is full.
- * Condition 2: Pays ONLY seats with income_type = 'DAILY'.
+ * Rule: Pays daily for 365 days, STARTING ONLY after the batch is full.
  */
 exports.runDailyIncome = async() => {
     console.log("🔄 Starting Daily Income Distribution...");
@@ -15,66 +13,68 @@ exports.runDailyIncome = async() => {
         for (const pkg of packages.rows) {
             const BATCH_SIZE = pkg.total_seats || 180;
 
-            // 1. Identify which Batches are FULL (Strict numeric comparison)
+            // 1. Identify Full Batches and find the Completion Date (Max booked_at)
             const fullBatchesRes = await pool.query(
-                `SELECT batch_number 
+                `SELECT batch_number, MAX(booked_at) as completion_date 
                  FROM seats 
                  WHERE package_id = $1 AND status = 'OCCUPIED' 
                  GROUP BY batch_number 
                  HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
             );
 
-            const fullBatches = fullBatchesRes.rows.map(r => r.batch_number);
+            for (const batch of fullBatchesRes.rows) {
+                const batchNum = batch.batch_number;
+                const completionDate = new Date(batch.completion_date);
+                const today = new Date();
 
-            if (fullBatches.length === 0) continue;
+                // Calculate days passed since the BATCH was finalized
+                const diffTime = Math.abs(today - completionDate);
+                const daysSinceCompletion = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-            // 2. Fetch seats belonging ONLY to these FULL batches + DAILY Plan
-            const seatRes = await pool.query(
-                `SELECT id, user_id, batch_number, daily_income 
-                 FROM seats 
-                 WHERE package_id = $1 
-                 AND status = 'OCCUPIED'
-                 AND income_type = 'DAILY'
-                 AND batch_number = ANY($2::int[])`, [pkg.id, fullBatches]
-            );
+                // 🟢 RULE: Only pay if within the 365-day window of batch completion
+                // Starts paying 1 day after the batch is full
+                if (daysSinceCompletion > 365 || daysSinceCompletion < 1) continue;
 
-            for (const seat of seatRes.rows) {
-                // Priority: Seat-specific rate > Package rate
-                const incomeAmount = Number(seat.daily_income) > 0 ?
-                    Number(seat.daily_income) :
-                    Number(pkg.daily_income);
-
-                // 3. SAFETY CHECK: Already paid today?
-                const exists = await pool.query(
-                    `SELECT 1 FROM income_cycles 
-                     WHERE seat_id = $1 AND income_type = 'DAILY' 
-                     AND cycle_date = CURRENT_DATE`, [seat.id]
+                // 2. Fetch Daily-plan seats in this specific finalized batch
+                const seatRes = await pool.query(
+                    `SELECT id, user_id, daily_income 
+                     FROM seats 
+                     WHERE package_id = $1 AND batch_number = $2
+                     AND status = 'OCCUPIED' AND income_type = 'DAILY'`, [pkg.id, batchNum]
                 );
 
-                if (exists.rows.length > 0) continue;
+                for (const seat of seatRes.rows) {
+                    const incomeAmount = Number(seat.daily_income) > 0 ?
+                        Number(seat.daily_income) :
+                        Number(pkg.daily_income);
 
-                if (incomeAmount > 0) {
-                    // Update Wallet with NULL protection (COALESCE)
-                    await pool.query(
-                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                    const exists = await pool.query(
+                        `SELECT 1 FROM income_cycles 
+                         WHERE seat_id = $1 AND income_type = 'DAILY' 
+                         AND cycle_date = CURRENT_DATE`, [seat.id]
                     );
 
-                    // Log Transaction
-                    await pool.query(
-                        `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
-                         VALUES ($1, $2, $3, 'DAILY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
-                    );
+                    if (exists.rows.length > 0) continue;
 
-                    // Record Cycle
-                    await pool.query(
-                        `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
-                         VALUES ($1, $2, 'DAILY', CURRENT_DATE)`, [seat.user_id, seat.id]
-                    );
+                    if (incomeAmount > 0) {
+                        await pool.query(
+                            "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                        );
+
+                        await pool.query(
+                            `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
+                             VALUES ($1, $2, $3, 'DAILY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
+                        );
+
+                        await pool.query(
+                            `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
+                             VALUES ($1, $2, 'DAILY', CURRENT_DATE)`, [seat.user_id, seat.id]
+                        );
+                    }
                 }
             }
         }
         console.log("✅ Daily Income Completed.");
-
     } catch (err) {
         console.error("❌ Daily Income Failed:", err.message);
     }
@@ -82,7 +82,7 @@ exports.runDailyIncome = async() => {
 
 /**
  * 🟡 RUN MONTHLY INCOME
- * Logic: Runs every 30 days.
+ * Rule: 12 payments total, starting 30 days after Batch Completion.
  */
 exports.runMonthlyIncome = async() => {
     console.log("🔄 Starting Monthly Income Distribution...");
@@ -94,64 +94,61 @@ exports.runMonthlyIncome = async() => {
             const BATCH_SIZE = pkg.total_seats || 180;
 
             const fullBatchesRes = await pool.query(
-                `SELECT batch_number 
+                `SELECT batch_number, MAX(booked_at) as completion_date 
                  FROM seats 
                  WHERE package_id = $1 AND status = 'OCCUPIED' 
                  GROUP BY batch_number 
                  HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
             );
 
-            const fullBatches = fullBatchesRes.rows.map(r => r.batch_number);
-            if (fullBatches.length === 0) continue;
-
-            const seatsRes = await pool.query(
-                `SELECT id, user_id, booked_at, monthly_income 
-                 FROM seats 
-                 WHERE package_id = $1 
-                 AND status = 'OCCUPIED'
-                 AND income_type = 'MONTHLY'
-                 AND batch_number = ANY($2::int[])`, [pkg.id, fullBatches]
-            );
-
-            for (const seat of seatsRes.rows) {
-                const incomeAmount = Number(seat.monthly_income) > 0 ?
-                    Number(seat.monthly_income) :
-                    Number(pkg.monthly_income);
-
-                const bookedDate = new Date(seat.booked_at);
+            for (const batch of fullBatchesRes.rows) {
+                const completionDate = new Date(batch.completion_date);
                 const today = new Date();
-                const diffTime = Math.abs(today - bookedDate);
+
+                const diffTime = Math.abs(today - completionDate);
                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const diffMonths = Math.floor(diffDays / 30);
 
-                // Check 30-day cycle
-                if (diffDays === 0 || diffDays % 30 !== 0) continue;
+                // 🟡 RULE: 12 payments (1 year limit) starting 30 days AFTER batch completion
+                if (diffMonths >= 12 || diffDays === 0 || diffDays % 30 !== 0) continue;
 
-                const exists = await pool.query(
-                    `SELECT 1 FROM income_cycles
-                     WHERE seat_id = $1 AND income_type = 'MONTHLY'
-                     AND cycle_date = CURRENT_DATE`, [seat.id]
+                const seatsRes = await pool.query(
+                    `SELECT id, user_id, monthly_income FROM seats 
+                     WHERE package_id = $1 AND batch_number = $2
+                     AND status = 'OCCUPIED' AND income_type = 'MONTHLY'`, [pkg.id, batch.batch_number]
                 );
-                if (exists.rows.length) continue;
 
-                if (incomeAmount > 0) {
-                    await pool.query(
-                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
-                    );
+                for (const seat of seatsRes.rows) {
+                    const incomeAmount = Number(seat.monthly_income) > 0 ?
+                        Number(seat.monthly_income) :
+                        Number(pkg.monthly_income);
 
-                    await pool.query(
-                        `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
-                         VALUES ($1, $2, $3, 'MONTHLY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
+                    const exists = await pool.query(
+                        `SELECT 1 FROM income_cycles
+                         WHERE seat_id = $1 AND income_type = 'MONTHLY'
+                         AND cycle_date = CURRENT_DATE`, [seat.id]
                     );
+                    if (exists.rows.length) continue;
 
-                    await pool.query(
-                        `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
-                         VALUES ($1, $2, 'MONTHLY', CURRENT_DATE)`, [seat.user_id, seat.id]
-                    );
+                    if (incomeAmount > 0) {
+                        await pool.query(
+                            "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                        );
+
+                        await pool.query(
+                            `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
+                             VALUES ($1, $2, $3, 'MONTHLY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
+                        );
+
+                        await pool.query(
+                            `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
+                             VALUES ($1, $2, 'MONTHLY', CURRENT_DATE)`, [seat.user_id, seat.id]
+                        );
+                    }
                 }
             }
         }
         console.log("✅ Monthly Income Completed.");
-
     } catch (err) {
         console.error("❌ Monthly Income Failed:", err.message);
     }
@@ -159,7 +156,7 @@ exports.runMonthlyIncome = async() => {
 
 /**
  * 🔵 RUN YEARLY INCOME
- * Logic: Runs every 365 days.
+ * Logic: Pays lump sum exactly 365 days after the Batch is finalized.
  */
 exports.runYearlyIncome = async() => {
     console.log("🔄 Starting Yearly Income Distribution...");
@@ -171,64 +168,59 @@ exports.runYearlyIncome = async() => {
             const BATCH_SIZE = pkg.total_seats || 180;
 
             const fullBatchesRes = await pool.query(
-                `SELECT batch_number 
+                `SELECT batch_number, MAX(booked_at) as completion_date 
                  FROM seats 
                  WHERE package_id = $1 AND status = 'OCCUPIED' 
                  GROUP BY batch_number 
                  HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
             );
 
-            const fullBatches = fullBatchesRes.rows.map(r => r.batch_number);
-            if (fullBatches.length === 0) continue;
-
-            const seatsRes = await pool.query(
-                `SELECT id, user_id, booked_at, yearly_income 
-                 FROM seats 
-                 WHERE package_id = $1 
-                 AND status = 'OCCUPIED'
-                 AND income_type = 'YEARLY'
-                 AND batch_number = ANY($2::int[])`, [pkg.id, fullBatches]
-            );
-
-            for (const seat of seatsRes.rows) {
-                const incomeAmount = Number(seat.yearly_income) > 0 ?
-                    Number(seat.yearly_income) :
-                    Number(pkg.yearly_income);
-
-                const bookedDate = new Date(seat.booked_at);
+            for (const batch of fullBatchesRes.rows) {
+                const completionDate = new Date(batch.completion_date);
                 const today = new Date();
-                const diffTime = Math.abs(today - bookedDate);
+                const diffTime = Math.abs(today - completionDate);
                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-                // Check 365-day cycle
-                if (diffDays === 0 || diffDays % 365 !== 0) continue;
+                // 🔵 Logic: Pays exactly on day 365 after the batch was completed
+                if (diffDays !== 365) continue;
 
-                const exists = await pool.query(
-                    `SELECT 1 FROM income_cycles
-                     WHERE seat_id = $1 AND income_type = 'YEARLY'
-                     AND cycle_date = CURRENT_DATE`, [seat.id]
+                const seatsRes = await pool.query(
+                    `SELECT id, user_id, yearly_income FROM seats 
+                     WHERE package_id = $1 AND batch_number = $2
+                     AND status = 'OCCUPIED' AND income_type = 'YEARLY'`, [pkg.id, batch.batch_number]
                 );
-                if (exists.rows.length) continue;
 
-                if (incomeAmount > 0) {
-                    await pool.query(
-                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
-                    );
+                for (const seat of seatsRes.rows) {
+                    const incomeAmount = Number(seat.yearly_income) > 0 ?
+                        Number(seat.yearly_income) :
+                        Number(pkg.yearly_income);
 
-                    await pool.query(
-                        `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
-                         VALUES ($1, $2, $3, 'YEARLY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
+                    const exists = await pool.query(
+                        `SELECT 1 FROM income_cycles
+                         WHERE seat_id = $1 AND income_type = 'YEARLY'
+                         AND cycle_date = CURRENT_DATE`, [seat.id]
                     );
+                    if (exists.rows.length) continue;
 
-                    await pool.query(
-                        `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
-                         VALUES ($1, $2, 'YEARLY', CURRENT_DATE)`, [seat.user_id, seat.id]
-                    );
+                    if (incomeAmount > 0) {
+                        await pool.query(
+                            "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
+                        );
+
+                        await pool.query(
+                            `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
+                             VALUES ($1, $2, $3, 'YEARLY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
+                        );
+
+                        await pool.query(
+                            `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
+                             VALUES ($1, $2, 'YEARLY', CURRENT_DATE)`, [seat.user_id, seat.id]
+                        );
+                    }
                 }
             }
         }
         console.log("✅ Yearly Income Completed.");
-
     } catch (err) {
         console.error("❌ Yearly Income Failed:", err.message);
     }
