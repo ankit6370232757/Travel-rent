@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
-import { Save, Power, CreditCard, Lock, Bell, Percent, AlertTriangle } from "lucide-react";
+import { Save, Power, CreditCard, Bell, Percent, ImageIcon, ShieldAlert } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../../api/axios"; // Adjust path to your axios instance
+import api from "../../api/axios";
 
 // --- STYLED COMPONENTS ---
 const Container = styled(motion.div)`
@@ -39,6 +39,7 @@ const FormGroup = styled.div`
     padding: 14px; border-radius: 12px; color: #fff; outline: none; font-size: 14px;
     transition: all 0.2s;
     &:focus { border-color: #3ea6ff; background: rgba(0,0,0,0.6); }
+    option { background: #111; color: #fff; }
   }
 `;
 
@@ -64,13 +65,12 @@ const Switch = styled.button`
 `;
 
 const ActionButton = styled.button`
-  background: ${props => props.variant === 'danger' ? 'rgba(231, 76, 60, 0.1)' : 'linear-gradient(135deg, #3ea6ff 0%, #2563eb 100%)'};
-  color: ${props => props.variant === 'danger' ? '#e74c3c' : 'white'};
-  border: ${props => props.variant === 'danger' ? '1px solid rgba(231, 76, 60, 0.2)' : 'none'};
-  padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer;
+  background: linear-gradient(135deg, #3ea6ff 0%, #2563eb 100%);
+  color: white; border: none;
+  padding: 16px; border-radius: 12px; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 10px;
   transition: all 0.3s;
-  &:hover { transform: translateY(-2px); opacity: 0.9; }
+  &:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(62, 166, 255, 0.2); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -83,10 +83,11 @@ export default function AdminSettings() {
     deposit_status: true,
     withdraw_fee: 0,
     maintenance_mode: false,
-    announcement_text: ""
+    announcement_text: "",
+    announcement_image: "" // 🟢 New field initialized
   });
 
-  // 🔄 1. Fetch Real Data from DB
+  // 🔄 1. Fetch Data
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -95,7 +96,7 @@ export default function AdminSettings() {
         setLoading(false);
       } catch (err) {
         console.error("Fetch Error:", err);
-        toast.error("Failed to load system settings");
+        toast.error("Failed to load system parameters");
         setLoading(false);
       }
     };
@@ -111,18 +112,18 @@ export default function AdminSettings() {
     setSettings({ ...settings, [key]: !settings[key] });
   };
 
-  // 💾 2. Save Data to DB
+  // 💾 2. Save Data
   const saveSettings = async () => {
-    const load = toast.loading("Syncing System Parameters...");
+    const load = toast.loading("Updating Global configuration...");
     try {
       await api.post("/admin/settings", settings);
-      toast.success("System Settings Updated!", { id: load });
+      toast.success("System parameters synced!", { id: load });
     } catch (err) {
-      toast.error("Database update failed", { id: load });
+      toast.error("Cloud synchronization failed", { id: load });
     }
   };
 
-  if (loading) return <div style={{padding: 50, textAlign: 'center', color: '#666'}}>Initializing System Config...</div>;
+  if (loading) return <div style={{padding: 100, textAlign: 'center', color: '#444'}}>Loading Terminal Config...</div>;
 
   return (
     <Container initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -132,16 +133,16 @@ export default function AdminSettings() {
         <div>
             <CardHeader><CreditCard size={18}/><h3>Financial Config</h3></CardHeader>
             <FormGroup style={{marginTop: 20}}>
-                <label>Global Deposit UPI ID</label>
-                <input name="upi_id" value={settings.upi_id} onChange={handleChange} placeholder="e.g. merchant@upi" />
+                <label>Merchant UPI ID</label>
+                <input name="upi_id" value={settings.upi_id} onChange={handleChange} placeholder="e.g. pay@bank" />
             </FormGroup>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap: 15, marginTop: 15}}>
                 <FormGroup>
-                    <label>Min Withdraw ($)</label>
+                    <label>Min Payout ($)</label>
                     <input type="number" name="min_withdraw" value={settings.min_withdraw} onChange={handleChange} />
                 </FormGroup>
                 <FormGroup>
-                    <label>Withdraw Fee (%)</label>
+                    <label>Admin Fee (%)</label>
                     <div style={{position:'relative'}}>
                         <input type="number" name="withdraw_fee" value={settings.withdraw_fee} onChange={handleChange} style={{width:'100%'}} />
                         <Percent size={14} style={{position:'absolute', right:12, top:15, color:'#444'}}/>
@@ -151,23 +152,23 @@ export default function AdminSettings() {
         </div>
       </Card>
 
-      {/* 🔒 STATUS CONTROLS */}
+      {/* 🔒 GATEWAY STATUS */}
       <Card>
         <div>
-            <CardHeader><Power size={18} color="#e74c3c"/><h3>Gateway Status</h3></CardHeader>
+            <CardHeader><Power size={18}/><h3>Gateway Status</h3></CardHeader>
             <div style={{display:'flex', flexDirection:'column', gap: 12, marginTop: 20}}>
                 <ControlRow active={settings.withdraw_status}>
                     <div className="label-group">
-                        <span>Withdrawal Gateway</span>
-                        <small>{settings.withdraw_status ? "Operational" : "Disabled by Admin"}</small>
+                        <span>Withdrawal System</span>
+                        <small>{settings.withdraw_status ? "Operational" : "Disabled"}</small>
                     </div>
                     <Switch active={settings.withdraw_status} onClick={() => handleToggle('withdraw_status')} />
                 </ControlRow>
 
                 <ControlRow active={settings.deposit_status}>
                     <div className="label-group">
-                        <span>Deposit Gateway</span>
-                        <small>{settings.deposit_status ? "Active" : "Under Review"}</small>
+                        <span>Deposit System</span>
+                        <small>{settings.deposit_status ? "Active" : "Locked"}</small>
                     </div>
                     <Switch active={settings.deposit_status} onClick={() => handleToggle('deposit_status')} />
                 </ControlRow>
@@ -175,27 +176,39 @@ export default function AdminSettings() {
         </div>
       </Card>
 
-      {/* 📢 BROADCAST & SECURITY */}
+      {/* 📢 BROADCAST & INTEGRITY */}
       <Card>
         <div>
-            <CardHeader><Bell size={18} color="#f1c40f"/><h3>Broadcast Console</h3></CardHeader>
+            <CardHeader><Bell size={18}/><h3>Broadcast Console</h3></CardHeader>
             <FormGroup style={{marginTop: 20}}>
-                <label>Dashboard Alert Banner</label>
-                <textarea rows="2" name="announcement_text" value={settings.announcement_text} onChange={handleChange} placeholder="Update users about server status or events..." />
+                <label>Ticker Message</label>
+                <textarea rows="2" name="announcement_text" value={settings.announcement_text} onChange={handleChange} placeholder="What should users see?" />
+            </FormGroup>
+
+            <FormGroup style={{marginTop: 15}}>
+                <label>Announcement Media URL</label>
+                <div style={{position:'relative'}}>
+                  <input name="announcement_image" value={settings.announcement_image} onChange={handleChange} placeholder="https://image-link.com/banner.jpg" style={{paddingLeft: '45px'}} />
+                  <ImageIcon size={18} style={{position:'absolute', left: 14, top: 14, color: '#444'}} />
+                </div>
             </FormGroup>
             
             <FormGroup style={{marginTop: 15}}>
-                <label>System Integrity</label>
-                <select name="maintenance_mode" value={settings.maintenance_mode} onChange={(e) => setSettings({...settings, maintenance_mode: e.target.value === 'true'})} 
-                        style={{color: settings.maintenance_mode ? '#e74c3c' : '#2ecc71', fontWeight:'bold'}}>
-                    <option value="false">🟢 LIVE: Production Mode</option>
-                    <option value="true">🔴 MAINTENANCE: Restricted Access</option>
+                <label>System Mode</label>
+                <select 
+                  name="maintenance_mode" 
+                  value={settings.maintenance_mode} 
+                  onChange={(e) => setSettings({...settings, maintenance_mode: e.target.value === 'true'})} 
+                  style={{color: settings.maintenance_mode ? '#e74c3c' : '#2ecc71', fontWeight:'bold'}}
+                >
+                    <option value="false">🟢 PRODUCTION: Live</option>
+                    <option value="true">🔴 MAINTENANCE: Locked</option>
                 </select>
             </FormGroup>
         </div>
 
         <ActionButton onClick={saveSettings}>
-          <Save size={18} /> Push Global Updates
+          <Save size={18} /> Sync Cloud Config
         </ActionButton>
       </Card>
 

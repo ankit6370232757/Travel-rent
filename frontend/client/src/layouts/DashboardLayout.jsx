@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, TrendingUp, Users, DollarSign, Activity, Zap, Bell, X } from "lucide-react";
+import { 
+  Menu, TrendingUp, Users, DollarSign, Zap, Bell, X, 
+  Sparkles, ShieldCheck, Maximize2
+} from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
 import api from "../api/axios"; 
 
@@ -9,7 +12,7 @@ import Sidebar from "../components/Sidebar";
 import ChatBot from "../components/ChatBot";
 import RocketSplash from "../components/RocketSplash"; 
 
-// Components
+// Dashboard Sub-components
 import Wallet from "../dashboard/Wallet";
 import Withdraw from "../dashboard/Withdraw";
 import Referrals from "../dashboard/Referrals";
@@ -19,399 +22,333 @@ import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
 import AdminPanel from "../dashboard/AdminPanel"; 
 
+// --- ANIMATIONS ---
+const marquee = keyframes`
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+`;
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0px) rotateX(0deg); }
+  50% { transform: translateY(-5px) rotateX(1deg); }
+`;
+
 // --- STYLED COMPONENTS ---
 
 const LayoutWrapper = styled.div`
   min-height: 100vh;
-  background-color: #08080a; 
+  width: 100vw;
+  background-color: #050507; 
   color: #fff;
+  display: flex;
   position: relative;
   overflow-x: hidden;
   font-family: 'Inter', sans-serif;
-  display: flex;
+`;
+
+const SidebarContainer = styled.div`
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  width: 260px; /* Slimmer sidebar */
+  z-index: 1000;
+  transition: transform 0.3s ease;
+  @media (max-width: 1024px) {
+    transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-100%)'};
+  }
 `;
 
 const MainContent = styled.main`
   flex: 1;
-  margin-left: 280px; 
-  padding: 30px;
+  margin-left: 260px; 
+  padding: 25px; /* Reduced padding for density */
   min-height: 100vh;
-  position: relative;
-  z-index: 1;
-  width: calc(100% - 280px); 
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 50% 0%, rgba(20, 20, 30, 0.4) 0%, rgba(5, 5, 7, 1) 100%);
   
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     margin-left: 0;
-    width: 100%;
-    padding: 20px;
-    padding-top: 80px; 
+    padding: 85px 15px 30px 15px;
   }
 `;
 
-// 🟢 NEW: Announcement Banner Styled Component
-const Banner = styled(motion.div)`
-  background: linear-gradient(90deg, #3ea6ff 0%, #8e2de2 100%);
-  color: white;
-  padding: 14px 24px;
-  border-radius: 16px;
+const MarqueeContainer = styled(motion.div)`
+  background: rgba(62, 166, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(62, 166, 255, 0.2);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  margin-bottom: 30px;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: 0 10px 25px rgba(62, 166, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 44px; /* Slimmer ticker */
   position: relative;
-  z-index: 10;
 `;
 
-const BackgroundGlow = styled.div`
-  position: fixed;
-  top: 0; right: 0;
-  width: 60vw; height: 60vw;
-  background: radial-gradient(circle at 70% 20%, rgba(62, 166, 255, 0.08) 0%, rgba(0,0,0,0) 60%);
-  z-index: 0; pointer-events: none;
+const MarqueeText = styled.div`
+  white-space: nowrap;
+  display: inline-block;
+  padding-left: 100%;
+  animation: ${marquee} 35s linear infinite;
+  font-weight: 500;
+  font-size: 13px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  &:hover { animation-play-state: paused; }
+  .marquee-item { display: inline-flex; align-items: center; gap: 12px; margin-right: 80px; }
 `;
 
-const SecondaryGlow = styled.div`
-  position: fixed;
-  bottom: 0; left: 0;
-  width: 40vw; height: 40vw;
-  background: radial-gradient(circle at 20% 80%, rgba(142, 45, 226, 0.06) 0%, rgba(0,0,0,0) 60%);
-  z-index: 0; pointer-events: none;
+const AnnouncementImage = styled.img`
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  &:hover { transform: scale(1.1); border-color: #3ea6ff; }
 `;
 
-const MobileTopBar = styled.div`
+const FixedLabel = styled.div`
+  position: absolute;
+  left: 0; background: linear-gradient(90deg, #3ea6ff, #2563eb);
+  color: #fff; padding: 0 15px; height: 100%;
+  display: flex; align-items: center; font-weight: 800; z-index: 5;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  clip-path: polygon(0 0, 85% 0, 100% 100%, 0% 100%);
+`;
+
+const MobileHeader = styled.div`
   display: none;
-  padding: 15px 20px;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 60px;
+  background: rgba(8, 8, 10, 0.85);
+  backdrop-filter: blur(15px);
+  padding: 0 20px;
   align-items: center;
   justify-content: space-between;
-  background: rgba(10, 10, 15, 0.9);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  position: fixed; top: 0; left: 0; right: 0;
-  z-index: 90;
-
-  @media (max-width: 768px) { display: flex; }
-`;
-
-// --- DASHBOARD WIDGET STYLES ---
-
-const WelcomeSection = styled.div`
-  display: flex; justify-content: space-between; align-items: flex-end;
-  margin-bottom: 30px;
-`;
-
-const WelcomeText = styled.div`
-  h1 {
-    font-size: 28px; font-weight: 800; margin: 0;
-    background: linear-gradient(90deg, #fff, #a0a0a0);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  p { font-size: 14px; color: #888; margin: 6px 0 0 0; }
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  z-index: 900;
+  @media (max-width: 1024px) { display: flex; }
 `;
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 30px;
-
-  @media (max-width: 1200px) { grid-template-columns: repeat(2, 1fr); }
-  @media (max-width: 600px) { grid-template-columns: 1fr; }
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Smaller min-width */
+  gap: 15px;
+  margin-bottom: 25px;
 `;
 
 const StatCard = styled(motion.div)`
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  padding: 24px;
-  display: flex; align-items: center; gap: 16px;
-  transition: all 0.3s ease;
-  position: relative; overflow: hidden;
-
-  &:hover {
-    transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  }
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px; /* Smaller radius */
+  padding: 18px; /* Reduced padding */
+  display: flex; align-items: center; gap: 12px;
+  animation: ${float} 6s ease-in-out infinite;
+  animation-delay: ${props => props.$delay || '0s'};
 
   .icon-box {
-    width: 50px; height: 50px; border-radius: 14px;
+    width: 44px; height: 44px; border-radius: 12px;
     background: ${props => props.$bg || 'rgba(62, 166, 255, 0.1)'};
     color: ${props => props.$color || '#3ea6ff'};
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    svg { size: 20px; }
   }
   
   .info {
     display: flex; flex-direction: column;
-    span { font-size: 12px; color: #888; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
-    strong { font-size: 20px; color: #fff; font-weight: 700; margin-top: 4px; }
+    span { font-size: 10px; color: #777; text-transform: uppercase; font-weight: 700; }
+    strong { font-size: 18px; color: #fff; font-weight: 800; margin-top: 1px; }
   }
 `;
 
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 25px;
-  margin-bottom: 40px;
+// --- MODAL STYLES ---
+const ImageOverlay = styled(motion.div)`
+  position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+  z-index: 2000; display: flex; align-items: center; justify-content: center;
+  padding: 20px; backdrop-filter: blur(10px);
 `;
 
-const GridItem = styled(motion.div)`
-  &.wallet-section { grid-column: span 4; } 
-  &.chart-section { grid-column: span 8; }  
-  &.packages-section { grid-column: span 12; } 
-
-  @media (max-width: 1200px) {
-    &.wallet-section { grid-column: span 12; }
-    &.chart-section { grid-column: span 12; }
-  }
+const PreviewImage = styled(motion.img)`
+  max-width: 90%; max-height: 80vh; border-radius: 12px;
+  box-shadow: 0 0 50px rgba(62, 166, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
 `;
-
-const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 50 } } };
 
 // --- OVERVIEW COMPONENT ---
 const Overview = ({ user }) => {
-  const [stats, setStats] = useState({
-    balance: 0, totalEarnings: 0, activePlans: 0, totalReferrals: 0
-  });
+  const [stats, setStats] = useState({ balance: 0, totalEarnings: 0, activePlans: 0, totalReferrals: 0 });
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get("/auth/dashboard-stats"); 
-        if(res.data) {
-           setStats({
-             balance: Number(res.data.balance) || 0,
-             totalEarnings: Number(res.data.totalEarnings) || 0,
-             activePlans: Number(res.data.activePlans) || 0,
-             totalReferrals: Number(res.data.totalReferrals) || 0
-           });
-        }
-      } catch (error) {
-        console.error("Dashboard stats error", error);
-      }
-    };
-    fetchStats();
+    api.get("/auth/dashboard-stats").then(res => {
+      if(res.data) setStats({
+        balance: Number(res.data.balance) || 0,
+        totalEarnings: Number(res.data.totalEarnings) || 0,
+        activePlans: Number(res.data.activePlans) || 0,
+        totalReferrals: Number(res.data.totalReferrals) || 0
+      });
+    }).catch(e => console.error(e));
   }, []);
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible">
-      <WelcomeSection>
-        <WelcomeText>
-          <h1>Hello, {user?.name?.split(' ')[0] || "User"} 👋</h1>
-          <p>Here is your investment portfolio overview.</p>
-        </WelcomeText>
-      </WelcomeSection>
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>
+          Welcome back, <span style={{ color: '#3ea6ff' }}>{user.name.split(' ')[0]}</span> 👋
+        </h1>
+        <p style={{ color: '#555', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+           <ShieldCheck size={14} color="#2ecc71" /> Portfolio Status: <span style={{color: '#2ecc71', fontWeight: 700}}>Live</span>
+        </p>
+      </div>
 
       <StatsRow>
-         <StatCard variants={itemVariants}>
-            <div className="icon-box"><DollarSign size={24}/></div>
-            <div className="info">
-              <span>Total Balance</span>
-              <strong>${stats.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
-            </div>
-         </StatCard>
-         <StatCard variants={itemVariants} $bg="rgba(46, 204, 113, 0.1)" $color="#2ecc71">
-            <div className="icon-box"><TrendingUp size={24}/></div>
-            <div className="info">
-              <span>Total Profit</span>
-              <strong>${stats.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
-            </div>
-         </StatCard>
-         <StatCard variants={itemVariants} $bg="rgba(231, 76, 60, 0.1)" $color="#ff6b6b">
-            <div className="icon-box"><Zap size={24}/></div>
-            <div className="info">
-              <span>Active Plans</span>
-              <strong>{stats.activePlans} Running</strong>
-            </div>
-         </StatCard>
-         <StatCard variants={itemVariants} $bg="rgba(142, 45, 226, 0.1)" $color="#8e2de2">
-            <div className="icon-box"><Users size={24}/></div>
-            <div className="info">
-              <span>Network</span>
-              <strong>{stats.totalReferrals} Partners</strong>
-            </div>
-         </StatCard>
+        <StatCard $delay="0s">
+          <div className="icon-box"><DollarSign size={20}/></div>
+          <div className="info"><span>Balance</span><strong>${stats.balance.toLocaleString()}</strong></div>
+        </StatCard>
+        <StatCard $bg="rgba(46, 204, 113, 0.1)" $color="#2ecc71" $delay="1s">
+          <div className="icon-box"><TrendingUp size={20}/></div>
+          <div className="info"><span>Profit</span><strong>${stats.totalEarnings.toLocaleString()}</strong></div>
+        </StatCard>
+        <StatCard $bg="rgba(231, 76, 60, 0.1)" $color="#ff6b6b" $delay="2s">
+          <div className="icon-box"><Zap size={20}/></div>
+          <div className="info"><span>Engines</span><strong>{stats.activePlans}</strong></div>
+        </StatCard>
+        <StatCard $bg="rgba(142, 45, 226, 0.1)" $color="#8e2de2" $delay="3s">
+          <div className="icon-box"><Users size={20}/></div>
+          <div className="info"><span>Nodes</span><strong>{stats.totalReferrals}</strong></div>
+        </StatCard>
       </StatsRow>
 
-      <DashboardGrid>
-        <GridItem className="wallet-section" variants={itemVariants}>
-           <Wallet /> 
-        </GridItem>
-        <GridItem className="chart-section" variants={itemVariants}>
-           <Income />
-        </GridItem>
-        <GridItem className="packages-section" variants={itemVariants}>
-           <Packages />
-        </GridItem>
-      </DashboardGrid>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '20px' }}>
+         <div style={{ gridColumn: 'span 12' }}><Packages /></div>
+         <div style={{ gridColumn: 'span 12', lg: 'span 4' }}><Wallet /></div>
+         <div style={{ gridColumn: 'span 12', lg: 'span 8' }}><Income /></div>
+      </div>
     </motion.div>
   );
 };
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [user, setUser] = useState({ name: "User", email: "...", role: "user" });
+  const [user, setUser] = useState({ name: "User", role: "user" });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true); 
-  
-  // 🟢 NEW: Announcement State
-  const [announcement, setAnnouncement] = useState("");
-  const [bannerVisible, setBannerVisible] = useState(true);
+  const [announcement, setAnnouncement] = useState({ text: "", image: "" });
+  const [previewImage, setPreviewImage] = useState(null);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. Load User
   useEffect(() => {
-    const storedData = localStorage.getItem("user");
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        const realUser = parsedData.user || parsedData;
-        setUser(realUser);
-        if (realUser.role === 'admin' && activeTab === "dashboard") {
-          setActiveTab("admin-overview");
-        }
-      } catch (err) { console.error(err); }
+    const stored = JSON.parse(localStorage.getItem("user"));
+    if (stored) {
+      const userData = stored.user || stored;
+      setUser(userData);
+      if (userData.role === 'admin' && activeTab === 'dashboard') setActiveTab('admin-overview');
     }
+    
+    api.get("/settings/announcement").then(res => {
+      if (res.data) setAnnouncement({ text: res.data.announcement_text, image: res.data.announcement_image });
+    });
   }, []);
-
-  // 🟢 NEW: Fetch Announcement Data from Backend
-  useEffect(() => {
-    const fetchAnnouncement = async () => {
-      try {
-        const res = await api.get("/settings/announcement");
-        if (res.data && res.data.announcement_text) {
-          setAnnouncement(res.data.announcement_text);
-        }
-      } catch (err) {
-        console.error("Failed to fetch announcement", err);
-      }
-    };
-    fetchAnnouncement();
-  }, []);
-
-  // 🛡️ ROLE PROTECTION logic
-  useEffect(() => {
-    if (!user || !user.email) return; 
-    if (user.role === 'admin') {
-       if (activeTab === "dashboard") setActiveTab("admin-overview");
-       if (!activeTab.startsWith("admin-") && location.pathname !== '/admin') navigate('/admin');
-    } else if (activeTab.startsWith("admin-") || location.pathname === '/admin') {
-       setActiveTab('dashboard');
-       navigate('/dashboard');
-    }
-  }, [user, activeTab, location.pathname, navigate]);
 
   const handleTabChange = (tabId) => {
-    if (user.role === 'admin' && tabId === "dashboard") {
-      setActiveTab("admin-overview");
-      return;
-    }
-    if (tabId.startsWith("admin-")) { if (location.pathname !== '/admin') navigate('/admin'); } 
-    else { if (location.pathname === '/admin') navigate('/dashboard'); }
     setActiveTab(tabId);
     setSidebarOpen(false);
+    if (tabId.startsWith('admin-')) navigate('/admin');
+    else navigate('/dashboard');
   };
 
-  const handleLogout = () => {
-    if(window.confirm("Log out now?")) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
-    }
-  };
-
-  const renderContent = () => {
-    if (activeTab.startsWith("admin-")) {
-      const view = activeTab.replace("admin-", ""); 
-      return <AdminPanel initialView={view} />;
-    }
-    switch (activeTab) {
-      case "dashboard": 
-        if (user.role === 'admin') return <AdminPanel initialView="overview" />;
-        return <Overview user={user} />;
-      case "wallet":   return <Wallet />;
-      case "withdraw": return <Withdraw />;
-      case "history":  return <History />; 
-      case "settings": return <Settings />;
-      case "network":  return <Referrals />;
-      case "earnings": return <Income />;
-      case "packages": return <Packages />;
-      default:          
-        if (user.role === 'admin') return <AdminPanel initialView="overview" />;
-        return <Overview user={user} />;
-    }
-  };
+  const isAdminView = activeTab.startsWith("admin-");
 
   return (
     <LayoutWrapper>
       <AnimatePresence>
-        {showSplash && (
-          <RocketSplash onComplete={() => setShowSplash(false)} />
+        {showSplash && <RocketSplash onComplete={() => setShowSplash(false)} />}
+        
+        {/* IMAGE PREVIEW MODAL */}
+        {previewImage && (
+          <ImageOverlay 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setPreviewImage(null)}
+          >
+            <X size={30} style={{position: 'absolute', top: 30, right: 30, cursor: 'pointer', color: '#888'}} />
+            <PreviewImage 
+              src={previewImage} 
+              initial={{ scale: 0.8, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </ImageOverlay>
         )}
       </AnimatePresence>
 
-      <BackgroundGlow />
-      <SecondaryGlow />
-      
-      <MobileTopBar>
-        <span style={{ fontWeight: 800, fontSize: '20px' }}>Travel<span style={{color: '#3ea6ff'}}>Rent</span></span>
-        <Menu onClick={() => setSidebarOpen(true)} color="white" />
-      </MobileTopBar>
+      <MobileHeader>
+        <div style={{fontWeight:900, fontSize:'18px'}}>Travel<span style={{color:'#3ea6ff'}}>Rent</span></div>
+        <Menu onClick={() => setSidebarOpen(true)} size={22} style={{cursor:'pointer'}} />
+      </MobileHeader>
 
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={handleTabChange} 
-        onLogout={handleLogout}
-        user={user}
-        isOpen={isSidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-      
+      <SidebarContainer $isOpen={isSidebarOpen}>
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={handleTabChange} 
+          user={user} 
+          isOpen={isSidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </SidebarContainer>
+
       <MainContent>
-        {/* 🟢 NEW: Integrated Announcement Banner */}
-        <AnimatePresence>
-          {announcement && bannerVisible && (
-            <Banner
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Bell size={20} />
-                <span>{announcement}</span>
-              </div>
-              <button 
-                onClick={() => setBannerVisible(false)}
-                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-              >
-                <X size={18} />
-              </button>
-            </Banner>
-          )}
-        </AnimatePresence>
+        {announcement.text && !isAdminView && (
+          <MarqueeContainer initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+            <FixedLabel><Bell size={12} style={{marginRight: 6}}/> Info</FixedLabel>
+            <MarqueeText>
+              {[1, 2].map((i) => (
+                <div className="marquee-item" key={i}>
+                  {announcement.image && (
+                    <AnnouncementImage 
+                      src={announcement.image} 
+                      alt="News" 
+                      onClick={() => setPreviewImage(announcement.image)} 
+                    />
+                  )}
+                  <span>🚀 {announcement.text}</span>
+                </div>
+              ))}
+            </MarqueeText>
+          </MarqueeContainer>
+        )}
 
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, rotateX: 5, y: 10 }}
+            animate={{ opacity: 1, rotateX: 0, y: 0 }}
+            exit={{ opacity: 0, rotateX: -5, y: -10 }}
+            transition={{ type: "spring", stiffness: 120, damping: 20 }}
+            style={{ transformStyle: 'preserve-3d', width: '100%' }}
           >
-            {renderContent()}
+             {isAdminView ? (
+               <AdminPanel initialView={activeTab.replace("admin-", "")} />
+            ) : (
+              activeTab === "wallet" ? <Wallet /> :
+              activeTab === "withdraw" ? <Withdraw /> :
+              activeTab === "history" ? <History /> :
+              activeTab === "settings" ? <Settings /> :
+              activeTab === "network" ? <Referrals /> :
+              activeTab === "earnings" ? <Income /> :
+              activeTab === "packages" ? <Packages /> : <Overview user={user} />
+            )}
           </motion.div>
         </AnimatePresence>
       </MainContent>
+
       <ChatBot />
     </LayoutWrapper>
   );
