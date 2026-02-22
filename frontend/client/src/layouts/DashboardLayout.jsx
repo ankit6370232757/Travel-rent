@@ -3,7 +3,7 @@ import styled, { keyframes } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Menu, TrendingUp, Users, DollarSign, Zap, Bell, X, 
-  Sparkles, ShieldCheck, Maximize2
+  Sparkles, ShieldCheck, Megaphone
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"; 
 import api from "../api/axios"; 
@@ -50,7 +50,7 @@ const SidebarContainer = styled.div`
   position: fixed;
   top: 0; left: 0;
   height: 100vh;
-  width: 260px; /* Slimmer sidebar */
+  width: 260px;
   z-index: 1000;
   transition: transform 0.3s ease;
   @media (max-width: 1024px) {
@@ -61,7 +61,7 @@ const SidebarContainer = styled.div`
 const MainContent = styled.main`
   flex: 1;
   margin-left: 260px; 
-  padding: 25px; /* Reduced padding for density */
+  padding: 25px;
   min-height: 100vh;
   width: 100%;
   display: flex;
@@ -74,41 +74,96 @@ const MainContent = styled.main`
   }
 `;
 
+// --- 📢 ANNOUNCEMENT MODAL STYLES (CENTERED) ---
+const ModalOverlay = styled(motion.div)`
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0,0,0,0.85);
+  z-index: 3000; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  padding: 20px; 
+  backdrop-filter: blur(8px);
+`;
+
+const AnnouncementCard = styled(motion.div)`
+  background: #0f0f13;
+  width: 100%; 
+  max-width: 480px;
+  border-radius: 24px;
+  border: 1px solid rgba(62, 166, 255, 0.2);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+`;
+
+const ModalClose = styled.button`
+  position: absolute; 
+  top: 15px; 
+  right: 15px;
+  background: rgba(0,0,0,0.6); 
+  border: none; 
+  color: white;
+  width: 32px; 
+  height: 32px; 
+  border-radius: 50%;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  cursor: pointer; 
+  z-index: 10;
+  transition: 0.2s;
+  &:hover { background: #ff4757; transform: rotate(90deg); }
+`;
+
+const ModalImage = styled.img`
+  width: 100%; 
+  height: auto; 
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+`;
+
+const ModalContent = styled.div`
+  padding: 24px;
+  text-align: center;
+  h2 { font-size: 22px; margin-bottom: 12px; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  p { font-size: 14px; color: #a0a0a0; line-height: 1.6; margin-bottom: 20px; }
+`;
+
+const ConfirmButton = styled.button`
+  width: 100%; 
+  padding: 14px; 
+  border-radius: 14px; 
+  background: linear-gradient(90deg, #3ea6ff, #2563eb); 
+  border: none; 
+  color: white; 
+  font-weight: 700; 
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.3s;
+  &:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(62, 166, 255, 0.4); }
+`;
+
+// --- UI COMPONENTS ---
 const MarqueeContainer = styled(motion.div)`
   background: rgba(62, 166, 255, 0.05);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(62, 166, 255, 0.2);
-  border-radius: 12px;
-  margin-bottom: 20px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  height: 44px; /* Slimmer ticker */
-  position: relative;
+  border-radius: 12px; margin-bottom: 20px;
+  overflow: hidden; display: flex; align-items: center;
+  height: 44px; position: relative;
 `;
 
 const MarqueeText = styled.div`
-  white-space: nowrap;
-  display: inline-block;
-  padding-left: 100%;
+  white-space: nowrap; display: inline-block; padding-left: 100%;
   animation: ${marquee} 35s linear infinite;
-  font-weight: 500;
-  font-size: 13px;
-  color: #fff;
-  display: flex;
-  align-items: center;
+  font-weight: 500; font-size: 13px; color: #fff;
+  display: flex; align-items: center;
   &:hover { animation-play-state: paused; }
   .marquee-item { display: inline-flex; align-items: center; gap: 12px; margin-right: 80px; }
-`;
-
-const AnnouncementImage = styled.img`
-  height: 28px;
-  border-radius: 4px;
-  object-fit: cover;
-  cursor: pointer;
-  transition: transform 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  &:hover { transform: scale(1.1); border-color: #3ea6ff; }
 `;
 
 const FixedLabel = styled.div`
@@ -137,7 +192,7 @@ const MobileHeader = styled.div`
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Smaller min-width */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
   margin-bottom: 25px;
 `;
@@ -145,8 +200,8 @@ const StatsRow = styled.div`
 const StatCard = styled(motion.div)`
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px; /* Smaller radius */
-  padding: 18px; /* Reduced padding */
+  border-radius: 16px;
+  padding: 18px;
   display: flex; align-items: center; gap: 12px;
   animation: ${float} 6s ease-in-out infinite;
   animation-delay: ${props => props.$delay || '0s'};
@@ -156,7 +211,6 @@ const StatCard = styled(motion.div)`
     background: ${props => props.$bg || 'rgba(62, 166, 255, 0.1)'};
     color: ${props => props.$color || '#3ea6ff'};
     display: flex; align-items: center; justify-content: center;
-    svg { size: 20px; }
   }
   
   .info {
@@ -164,19 +218,6 @@ const StatCard = styled(motion.div)`
     span { font-size: 10px; color: #777; text-transform: uppercase; font-weight: 700; }
     strong { font-size: 18px; color: #fff; font-weight: 800; margin-top: 1px; }
   }
-`;
-
-// --- MODAL STYLES ---
-const ImageOverlay = styled(motion.div)`
-  position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-  z-index: 2000; display: flex; align-items: center; justify-content: center;
-  padding: 20px; backdrop-filter: blur(10px);
-`;
-
-const PreviewImage = styled(motion.img)`
-  max-width: 90%; max-height: 80vh; border-radius: 12px;
-  box-shadow: 0 0 50px rgba(62, 166, 255, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.1);
 `;
 
 // --- OVERVIEW COMPONENT ---
@@ -239,9 +280,8 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true); 
   const [announcement, setAnnouncement] = useState({ text: "", image: "" });
-  const [previewImage, setPreviewImage] = useState(null);
+  const [showModal, setShowModal] = useState(false); 
 
-  const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -253,9 +293,24 @@ export default function DashboardLayout() {
     }
     
     api.get("/settings/announcement").then(res => {
-      if (res.data) setAnnouncement({ text: res.data.announcement_text, image: res.data.announcement_image });
+      if (res.data) {
+        setAnnouncement({ text: res.data.announcement_text, image: res.data.announcement_image });
+        
+        // --- 🟢 ADMIN SAFETY & SESSION LOGIC ---
+        const role = user?.role || JSON.parse(localStorage.getItem("user"))?.role;
+        const hasSeenPopup = sessionStorage.getItem("announcementSeen");
+
+        if (res.data.announcement_image && role !== 'admin' && !hasSeenPopup) {
+          setShowModal(true);
+        }
+      }
     });
-  }, []);
+  }, [user.role, activeTab]);
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    sessionStorage.setItem("announcementSeen", "true");
+  };
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -270,22 +325,33 @@ export default function DashboardLayout() {
     <LayoutWrapper>
       <AnimatePresence>
         {showSplash && <RocketSplash onComplete={() => setShowSplash(false)} />}
-        
-        {/* IMAGE PREVIEW MODAL */}
-        {previewImage && (
-          <ImageOverlay 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setPreviewImage(null)}
+
+        {/* 📢 POP-UP MODAL (Strictly for Users, Center Screen) */}
+        {showModal && announcement.image && !isAdminView && (
+          <ModalOverlay 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            onClick={handleCloseModal}
           >
-            <X size={30} style={{position: 'absolute', top: 30, right: 30, cursor: 'pointer', color: '#888'}} />
-            <PreviewImage 
-              src={previewImage} 
-              initial={{ scale: 0.8, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
+            <AnnouncementCard 
+              initial={{ scale: 0.7, opacity: 0, y: 50 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.7, opacity: 0, y: 50 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-            />
-          </ImageOverlay>
+            >
+              <ModalClose onClick={handleCloseModal}><X size={18}/></ModalClose>
+              <ModalImage src={announcement.image} alt="Promotion" />
+              <ModalContent>
+                <h2><Megaphone size={20} /> Important Notice</h2>
+                <p>{announcement.text || "New system updates are now live. Please review the latest opportunities in your dashboard."}</p>
+                <ConfirmButton onClick={handleCloseModal}>
+                  Got it, thanks!
+                </ConfirmButton>
+              </ModalContent>
+            </AnnouncementCard>
+          </ModalOverlay>
         )}
       </AnimatePresence>
 
@@ -309,18 +375,8 @@ export default function DashboardLayout() {
           <MarqueeContainer initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <FixedLabel><Bell size={12} style={{marginRight: 6}}/> Info</FixedLabel>
             <MarqueeText>
-              {[1, 2].map((i) => (
-                <div className="marquee-item" key={i}>
-                  {announcement.image && (
-                    <AnnouncementImage 
-                      src={announcement.image} 
-                      alt="News" 
-                      onClick={() => setPreviewImage(announcement.image)} 
-                    />
-                  )}
-                  <span>🚀 {announcement.text}</span>
-                </div>
-              ))}
+              <div className="marquee-item">🚀 {announcement.text}</div>
+              <div className="marquee-item">🚀 {announcement.text}</div>
             </MarqueeText>
           </MarqueeContainer>
         )}
