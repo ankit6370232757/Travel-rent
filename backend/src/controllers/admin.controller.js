@@ -509,3 +509,16 @@ exports.getAllFinanceLogs = async(req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+// 🟢 ADD THIS FUNCTION
+exports.getPendingRequestCount = async(req, res) => {
+    try {
+        // Counts all 'PENDING' status rows from your transactions/requests table
+        const result = await pool.query(
+            "SELECT COUNT(*) FROM transactions WHERE status = 'PENDING'"
+        );
+        res.json({ count: parseInt(result.rows[0].count) });
+    } catch (error) {
+        console.error("Error fetching pending count:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
