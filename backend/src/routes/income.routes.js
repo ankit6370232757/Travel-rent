@@ -51,5 +51,48 @@ router.post("/yearly", async(_, res) => {
     await incomeService.runYearlyIncome();
     res.json({ message: "Yearly income executed" });
 });
+// 🟢 NEW: Get Analytics data with growth indicator
+router.get("/analytics", authMiddleware, async(req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Get daily totals for the graph (Last 30 days)
+        const graphData = await pool.query(`
+            SELECT 
+                TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+                SUM(amount)::float as amount
+            FROM income_logs
+            WHERE user_id = $1 
+            AND income_type IN ('DAILY', 'MONTHLY', 'YEARLY')
+            GROUP BY date
+            ORDER BY date ASC
+            LIMIT 30`, [userId]);
+
+        // 2. Calculate Growth Percentage (This week vs Last week)
+        const growthRes = await pool.query(`
+            SELECT 
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN amount ELSE 0 END) as this_week,
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days' THEN amount ELSE 0 END) as last_week
+            FROM income_logs
+            WHERE user_id = $1 AND income_type IN ('DAILY', 'MONTHLY', 'YEARLY')`, [userId]);
+
+        const { this_week, last_week } = growthRes.rows[0];
+        let growth = 0;
+        if (Number(last_week) > 0) {
+            growth = ((Number(this_week) - Number(last_week)) / Number(last_week)) * 100;
+        } else if (Number(this_week) > 0) {
+            growth = 100; // 100% growth if there was nothing last week
+        }
+
+        res.json({
+            chartData: graphData.rows,
+            growth: growth.toFixed(1),
+            thisWeekTotal: Number(this_week || 0).toFixed(2)
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Analytics fetch failed" });
+    }
+});
 
 module.exports = router;
