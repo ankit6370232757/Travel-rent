@@ -20,7 +20,8 @@ import Income from "../dashboard/Income";
 import Packages from "../dashboard/Packages";
 import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
-import AdminPanel from "../dashboard/AdminPanel"; 
+import AdminPanel from "../dashboard/AdminPanel";
+import EarningHistory from "../dashboard/EarningHistory";
 
 // --- ANIMATIONS ---
 const marquee = keyframes`
@@ -399,7 +400,8 @@ export default function DashboardLayout() {
               activeTab === "settings" ? <Settings /> :
               activeTab === "network" ? <Referrals /> :
               activeTab === "earnings" ? <Income /> :
-              activeTab === "packages" ? <Packages /> : <Overview user={user} />
+              activeTab === "packages" ? <Packages /> :
+              activeTab === "earning-history" ? <EarningHistory /> : <Overview user={user} />
             )}
           </motion.div>
         </AnimatePresence>
