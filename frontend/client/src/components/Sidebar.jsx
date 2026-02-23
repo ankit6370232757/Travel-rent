@@ -17,7 +17,7 @@ import {
   Sliders,
   Package,
   Banknote,
-  TrendingUp 
+  TrendingUp
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -313,6 +313,9 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                 </MenuItem>
                 <MenuItem $active={activeTab === "earning-history"} onClick={() => handleNav("earning-history")}>
                  <TrendingUp size={18} /> Earning History
+                </MenuItem>
+                <MenuItem $active={activeTab === "earnings"} onClick={() => handleNav("earnings")}>
+                <BarChart2 size={18} /> Earning Analytics
                 </MenuItem>
                 <MenuItem $active={activeTab === "settings"} onClick={() => handleNav("settings")}>
                   <SettingsIcon size={18} /> Settings
