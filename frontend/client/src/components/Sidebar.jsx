@@ -17,7 +17,7 @@ import {
   Sliders,
   Package,
   Banknote,
-  TrendingUp
+  TrendingUp 
 } from "lucide-react";
 
 // --- STYLED COMPONENTS ---
@@ -142,6 +142,20 @@ const MenuItem = styled(motion.div)`
   }
 `;
 
+const NotificationBadge = styled.span`
+  background: #ff4757;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 10px;
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.4);
+`;
+
 const UserSection = styled.div`
   margin-top: 20px;
   padding-top: 20px;
@@ -197,7 +211,7 @@ const UserMeta = styled.div`
   }
 `;
 
-export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose }) {
+export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose, pendingCount }) {
   const isAdmin = user && user.role === 'admin';
 
   const handleNav = (id) => {
@@ -238,7 +252,12 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                   $active={activeTab === "admin-requests"} 
                   onClick={() => handleNav("admin-requests")}
                 >
-                  <FileText size={18} /> Requests
+                  <FileText size={18} /> 
+                  Requests
+                  {/* 🟢 Show badge if count > 0 */}
+                  {isAdmin && pendingCount > 0 && (
+                    <NotificationBadge>{pendingCount}</NotificationBadge>
+                  )}
                 </MenuItem>
 
                 <MenuItem 
@@ -312,7 +331,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                   <Users size={18} /> My Network
                 </MenuItem>
                 <MenuItem $active={activeTab === "earning-history"} onClick={() => handleNav("earning-history")}>
-                 <TrendingUp size={18} /> Earning History
+                   <TrendingUp size={18} /> Earning History
                 </MenuItem>
                 <MenuItem $active={activeTab === "earnings"} onClick={() => handleNav("earnings")}>
                 <BarChart2 size={18} /> Earning Analytics
