@@ -15,27 +15,36 @@ router.get("/history", authMiddleware, async(req, res) => {
                 l.income_type, 
                 l.created_at, 
                 p.name as package_name,
-                GREATEST(0, 365 - (CURRENT_DATE - b.completion_date::date)) as days_remaining
+                -- 🟢 Fetch dynamic batch number from the seats/batches
+                s.batch_number as batch_no, 
+                -- 🟢 Dynamic progress calculation based on batch completion
+                GREATEST(0, 
+                    CASE 
+                        WHEN l.income_type = 'DAILY' THEN 365 
+                        WHEN l.income_type = 'MONTHLY' THEN 12 
+                        ELSE 1 
+                    END - (CURRENT_DATE - b.completion_date::date)
+                ) as days_remaining
             FROM income_logs l
             JOIN packages p ON l.package_id = p.id
+            -- 🟢 Join with seats to identify the specific batch for each log
+            LEFT JOIN seats s ON l.seat_id = s.id 
             LEFT JOIN (
                 SELECT package_id, batch_number, MAX(booked_at) as completion_date
                 FROM seats 
                 GROUP BY package_id, batch_number
-            ) b ON l.package_id = b.package_id
+            ) b ON s.package_id = b.package_id AND s.batch_number = b.batch_number
             WHERE l.user_id = $1 
-            -- 🟢 Only allow Daily, Monthly, and Yearly Package Incomes
             AND l.income_type IN ('DAILY', 'MONTHLY', 'YEARLY') 
             ORDER BY l.created_at DESC`;
 
         const result = await pool.query(query, [userId]);
         res.json(result.rows);
     } catch (err) {
-        console.error(err);
+        console.error("SQL Error:", err);
         res.status(500).json({ message: "Failed to fetch earning history" });
     }
 });
-
 // ... keep existing routes below ...
 router.post("/daily", async(_, res) => {
     await incomeService.runDailyIncome();
