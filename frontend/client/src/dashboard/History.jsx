@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowUpRight, ArrowDownLeft, RefreshCw, Clock, 
-  CheckCircle, Filter, Wallet, TrendingUp, Download, AlertCircle 
+  CheckCircle, Filter, Wallet, TrendingUp, Download, AlertCircle,
+  ChevronLeft, ChevronRight, Search, FileSpreadsheet 
 } from "lucide-react";
 import api from "../api/axios";
+import * as XLSX from "xlsx"; // 🟢 Added for Excel Export
 
 // --- STYLED COMPONENTS ---
 
@@ -43,6 +45,54 @@ const Header = styled.div`
     align-items: center; 
     gap: 12px; 
   }
+`;
+
+const ActionGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 12px 8px 35px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    width: 200px;
+    transition: all 0.3s ease;
+    &:focus { width: 250px; border-color: #3ea6ff; }
+  }
+
+  svg {
+    position: absolute;
+    left: 10px;
+    color: #666;
+  }
+`;
+
+const ExportBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(46, 204, 113, 0.1);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.2);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  &:hover { background: rgba(46, 204, 113, 0.2); transform: translateY(-2px); }
 `;
 
 const FilterWrapper = styled.div`
@@ -163,11 +213,39 @@ const BalanceText = styled.span`
   border-radius: 6px;
 `;
 
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 25px;
+  padding-top: 10px;
+`;
+
+const PageBtn = styled.button`
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover:not(:disabled) { background: #3ea6ff; border-color: #3ea6ff; }
+  &:disabled { opacity: 0.3; cursor: not-allowed; }
+`;
+
 export default function History() {
   const [transactions, setTransactions] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [filter, setFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState(""); // 🟢 Search State
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchData();
@@ -182,33 +260,17 @@ export default function History() {
 
       const rawData = histRes.data;
       const liveBalance = Number(walletRes.data.balance);
-
-      /**
-       * BALANCE CALCULATION LOGIC
-       * We reverse engineer the balance history starting from the live current balance.
-       */
       let runningBal = liveBalance;
       
       const processedData = rawData.map((tx) => {
         const amt = Number(tx.amount);
         const type = tx.type.toUpperCase();
-
-        // CREDIT logic (Money added to wallet balance)
         const isCredit = ['DEPOSIT', 'DAILY', 'REFERRAL', 'OTS_BONUS', 'EARNING', 'BONUS', 'CREDITED'].some(t => type.includes(t));
-        
-        // DEBIT logic (Money deducted from wallet balance)
         const isDebit = ['WITHDRAWAL', 'INVESTMENT', 'PACKAGE_BUY'].some(t => type.includes(t));
-
         const snapshotBalance = runningBal;
 
-        // When traversing backward through sorted history (Newest to Oldest):
-        // If a transaction was a credit, the balance BEFORE it was lower.
-        // If a transaction was a debit, the balance BEFORE it was higher.
-        if (isCredit) {
-           runningBal -= amt;
-        } else if (isDebit) {
-           runningBal += amt;
-        }
+        if (isCredit) runningBal -= amt;
+        else if (isDebit) runningBal += amt;
 
         return { ...tx, balanceAfter: snapshotBalance, isCredit, isDebit };
       });
@@ -222,15 +284,58 @@ export default function History() {
     }
   };
 
+  // 🟢 Combined Filter + Search Logic
   useEffect(() => {
-    if (filter === "ALL") {
-      setFilteredData(transactions);
-    } else if (filter === "EARNING") {
-      setFilteredData(transactions.filter(tx => tx.isCredit && !tx.type.includes('DEPOSIT')));
-    } else {
-      setFilteredData(transactions.filter(tx => tx.type.toUpperCase().includes(filter)));
+    let result = transactions;
+
+    // 1. Filter by Category
+    if (filter !== "ALL") {
+      if (filter === "EARNING") {
+        result = result.filter(tx => tx.isCredit && !tx.type.includes('DEPOSIT'));
+      } else {
+        result = result.filter(tx => tx.type.toUpperCase().includes(filter));
+      }
     }
-  }, [filter, transactions]);
+
+    // 2. Filter by Search Term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(tx => 
+        tx.type.toLowerCase().includes(term) || 
+        tx.id?.toString().includes(term) || 
+        tx.status?.toLowerCase().includes(term) ||
+        tx.amount?.toString().includes(term)
+      );
+    }
+
+    setFilteredData(result);
+    setCurrentPage(1);
+  }, [filter, searchTerm, transactions]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredData.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, filteredData]);
+
+  // 🟢 Excel Export logic
+  const exportToExcel = () => {
+    const dataToExport = filteredData.map((tx, index) => ({
+      "No.": index + 1,
+      "Transaction ID": tx.id || "System_Gen",
+      "Type": tx.type,
+      "Date": new Date(tx.date).toLocaleDateString(),
+      "Time": new Date(tx.date).toLocaleTimeString(),
+      "Status": tx.status || "SUCCESS",
+      "Amount": `${tx.isCredit ? '+' : '-'}${tx.amount}`,
+      "Balance": tx.balanceAfter.toFixed(2)
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "History");
+    XLSX.writeFile(workbook, `Transaction_History_${new Date().toLocaleDateString()}.xlsx`);
+  };
 
   const getTypeStyle = (type) => {
     const t = type.toUpperCase();
@@ -250,10 +355,25 @@ export default function History() {
 
   return (
     <Card initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      
       <Header>
         <h2><Clock size={22} color="#3ea6ff" /> Transaction History</h2>
-        
+        <ActionGroup>
+          <SearchWrapper>
+            <Search size={16} />
+            <input 
+              type="text" 
+              placeholder="Search history..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </SearchWrapper>
+          <ExportBtn onClick={exportToExcel}>
+            <FileSpreadsheet size={18} /> Export Excel
+          </ExportBtn>
+        </ActionGroup>
+      </Header>
+
+      <div style={{ marginBottom: '20px' }}>
         <FilterWrapper>
           {["ALL", "DEPOSIT", "WITHDRAWAL", "INVESTMENT", "EARNING"].map((f) => (
             <FilterBtn 
@@ -265,7 +385,7 @@ export default function History() {
             </FilterBtn>
           ))}
         </FilterWrapper>
-      </Header>
+      </div>
 
       {loading ? (
         <div style={{textAlign: 'center', padding: '60px', color: '#666'}}>
@@ -273,78 +393,75 @@ export default function History() {
            <p>Syncing Ledger...</p>
         </div>
       ) : (
-        <TableContainer>
-          <Table>
-            <Thead>
-              <tr>
-                <Th style={{width: '60px'}}>#</Th>
-                <Th>Type & ID</Th>
-                <Th>Date & Time</Th>
-                <Th>Status</Th>
-                <Th style={{textAlign: 'right'}}>Amount</Th>
-                <Th style={{textAlign: 'right'}}>Balance</Th>
-              </tr>
-            </Thead>
-            <tbody>
-              {filteredData.length > 0 ? filteredData.map((tx, i) => {
-                const style = getTypeStyle(tx.type);
-                const statusStyle = getStatusStyle(tx.status);
-                
-                return (
-                  <Tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}>
-                    <Td style={{color: '#555', fontWeight:'700'}}>{i + 1}</Td>
-                    
-                    <Td>
-                      <TypeInfo>
-                        <IconBox bg={style.bg} color={style.color}>{style.icon}</IconBox>
-                        <div className="text-group">
-                           <strong>{style.label}</strong>
-                           <span>{tx.id ? `TRX-${tx.id}` : "System_Gen"}</span>
-                        </div>
-                      </TypeInfo>
-                    </Td>
-
-                    <Td>
-                      <div style={{color:'#ddd', fontSize:13, fontWeight: 500}}>
-                        {new Date(tx.date).toLocaleDateString()}
-                      </div>
-                      <div style={{fontSize:11, color:'#777'}}>
-                        {new Date(tx.date).toLocaleTimeString()}
-                      </div>
-                    </Td>
-
-                    <Td>
-                      <StatusBadge bg={statusStyle.bg} color={statusStyle.color} border={statusStyle.border}>
-                        {tx.status || 'SUCCESS'}
-                      </StatusBadge>
-                    </Td>
-
-                    <Td style={{ textAlign: 'right' }}>
-                      <Amount isPositive={tx.isCredit}>
-                        {tx.isCredit ? '+' : '-'}${Number(tx.amount).toFixed(2)}
-                      </Amount>
-                    </Td>
-
-                    <Td style={{ textAlign: 'right' }}>
-                        <BalanceText>
-                          ${tx.balanceAfter.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </BalanceText>
-                    </Td>
-                  </Tr>
-                );
-              }) : (
+        <>
+          <TableContainer>
+            <Table>
+              <Thead>
                 <tr>
-                  <Td colSpan="6" style={{textAlign: 'center', padding: '60px', color: '#666'}}>
-                    <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:10}}>
-                       <AlertCircle size={30} color="#444"/>
-                       <span>No records found for this category.</span>
-                    </div>
-                  </Td>
+                  <Th style={{width: '60px'}}>#</Th>
+                  <Th>Type & ID</Th>
+                  <Th>Date & Time</Th>
+                  <Th>Status</Th>
+                  <Th style={{textAlign: 'right'}}>Amount</Th>
+                  <Th style={{textAlign: 'right'}}>Balance</Th>
                 </tr>
-              )}
-            </tbody>
-          </Table>
-        </TableContainer>
+              </Thead>
+              <tbody>
+                {currentItems.length > 0 ? currentItems.map((tx, i) => {
+                  const style = getTypeStyle(tx.type);
+                  const statusStyle = getStatusStyle(tx.status);
+                  const globalIndex = (currentPage - 1) * itemsPerPage + i + 1;
+                  return (
+                    <Tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
+                      <Td style={{color: '#555', fontWeight:'700'}}>{globalIndex}</Td>
+                      <Td>
+                        <TypeInfo>
+                          <IconBox bg={style.bg} color={style.color}>{style.icon}</IconBox>
+                          <div className="text-group">
+                             <strong>{style.label}</strong>
+                             <span>{tx.id ? `TRX-${tx.id}` : "System_Gen"}</span>
+                          </div>
+                        </TypeInfo>
+                      </Td>
+                      <Td>
+                        <div style={{color:'#ddd', fontSize:13, fontWeight: 500}}>{new Date(tx.date).toLocaleDateString()}</div>
+                        <div style={{fontSize:11, color:'#777'}}>{new Date(tx.date).toLocaleTimeString()}</div>
+                      </Td>
+                      <Td>
+                        <StatusBadge bg={statusStyle.bg} color={statusStyle.color} border={statusStyle.border}>
+                          {tx.status || 'SUCCESS'}
+                        </StatusBadge>
+                      </Td>
+                      <Td style={{ textAlign: 'right' }}>
+                        <Amount isPositive={tx.isCredit}>{tx.isCredit ? '+' : '-'}${Number(tx.amount).toFixed(2)}</Amount>
+                      </Td>
+                      <Td style={{ textAlign: 'right' }}>
+                        <BalanceText>${tx.balanceAfter.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</BalanceText>
+                      </Td>
+                    </Tr>
+                  );
+                }) : (
+                  <tr>
+                    <Td colSpan="6" style={{textAlign: 'center', padding: '60px', color: '#666'}}>
+                      <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:10}}>
+                         <AlertCircle size={30} color="#444"/>
+                         <span>No records found matching your criteria.</span>
+                      </div>
+                    </Td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </TableContainer>
+
+          {totalPages > 1 && (
+            <PaginationContainer>
+              <PageBtn onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}><ChevronLeft size={18} /></PageBtn>
+              <span style={{ color: '#888', fontSize: '13px', fontWeight: '600' }}>Page {currentPage} of {totalPages}</span>
+              <PageBtn onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}><ChevronRight size={18} /></PageBtn>
+            </PaginationContainer>
+          )}
+        </>
       )}
     </Card>
   );

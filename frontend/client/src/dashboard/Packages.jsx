@@ -58,7 +58,6 @@ const Card = styled(motion.div)`
     box-shadow: 0 15px 40px -10px ${props => props.$shadow || 'rgba(0,0,0,0.5)'};
   }
 
-  /* Shine effect on hover */
   &::before {
     content: "";
     position: absolute;
@@ -122,6 +121,17 @@ const ProgressFill = styled(motion.div)`
   width: ${props => props.width}%; 
   background: ${props => props.gradient};
   border-radius: 10px;
+`;
+
+// --- NEW STYLED COMPONENT FOR THE SEAT COUNTER ---
+const SeatCounter = styled.div`
+  font-size: 10px;
+  color: #666;
+  margin-top: 8px;
+  text-align: right;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 // --- MODAL STYLES ---
@@ -256,7 +266,6 @@ export default function Packages() {
       setLoading(false);
       setSelectedPkg(null);
       
-      // Reload logic kept same (1.5s)
       setTimeout(() => window.location.reload(), 1500);
       
     } catch (err) {
@@ -313,6 +322,10 @@ export default function Packages() {
                       gradient={style.gradient} 
                     />
                   </ProgressBar>
+                  {/* 🟢 NEW SEAT COUNTER ADDED HERE */}
+                  <SeatCounter>
+                    {seatsInBatch} / {batchSize} Seats Booked
+                  </SeatCounter>
                 </ProgressSection>
               </div>
             </Card>

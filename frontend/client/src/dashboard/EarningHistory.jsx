@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   RefreshCw, Clock, CheckCircle, TrendingUp, Calendar, 
-  ChevronLeft, ChevronRight, FileSpreadsheet, AlertCircle, Search
+  ChevronLeft, ChevronRight, FileSpreadsheet, AlertCircle, Search, Layers
 } from "lucide-react";
 import api from "../api/axios";
 import * as XLSX from "xlsx";
@@ -58,12 +58,12 @@ const FilterBtn = styled.button`
 `;
 
 const TableContainer = styled.div` width: 100%; overflow-x: auto; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(0, 0, 0, 0.2); `;
-const Table = styled.table` width: 100%; border-collapse: collapse; min-width: 1000px; `;
-const Th = styled.th` text-align: left; padding: 18px 24px; color: #888; font-size: 12px; font-weight: 700; text-transform: uppercase; `;
+const Table = styled.table` width: 100%; border-collapse: collapse; min-width: 1100px; `;
+const Th = styled.th` text-align: left; padding: 18px 24px; color: #888; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; `;
 const Td = styled.td` padding: 20px 24px; font-size: 14px; color: #e0e0e0; vertical-align: middle; `;
 
 const PaginationWrapper = styled.div`
-  display: flex; align-items: center; justify-content: center; /* 🟢 Centered pagination */
+  display: flex; align-items: center; justify-content: center;
   margin-top: 25px; padding: 20px; gap: 20px; border-top: 1px solid rgba(255,255,255,0.05);
   span { color: #888; font-size: 13px; font-weight: 600; }
 `;
@@ -76,11 +76,21 @@ const PageBtn = styled.button`
   &:not(:disabled):hover { background: #3ea6ff; border-color: #3ea6ff; }
 `;
 
-const ExpiryBadge = styled.div`
-  display: flex; align-items: center; gap: 6px; font-size: 11px;
-  color: ${props => props.days < 10 ? '#ff4d4d' : '#2ecc71'};
-  background: ${props => props.days < 10 ? 'rgba(255, 77, 77, 0.1)' : 'rgba(46, 204, 113, 0.1)'};
-  padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);
+const StatusBadge = styled.div`
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+  color: ${props => props.$isMatured ? '#888' : '#3ea6ff'};
+  background: ${props => props.$isMatured ? 'rgba(255, 255, 255, 0.05)' : 'rgba(62, 166, 255, 0.1)'};
+  padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+`;
+
+const BatchTag = styled.span`
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
 `;
 
 export default function History() {
@@ -99,17 +109,27 @@ export default function History() {
       const [histRes, walletRes] = await Promise.all([api.get("/income/history"), api.get("/wallet")]);
       const liveBalance = Number(walletRes.data.balance);
       let runningBal = liveBalance;
+      
       const processed = histRes.data.map((tx) => {
         const snapshot = runningBal;
         runningBal -= Number(tx.amount);
-        return { ...tx, balanceAfter: snapshot };
+
+        // Calculate Contract Progress Day
+        // Daily: 365, Monthly: 12, Yearly: 1
+        const totalDuration = tx.income_type === 'DAILY' ? 365 : (tx.income_type === 'MONTHLY' ? 12 : 1);
+        const currentDay = totalDuration - (tx.days_remaining || 0);
+
+        return { 
+            ...tx, 
+            balanceAfter: snapshot,
+            progressLabel: `Day ${currentDay} of ${totalDuration}`
+        };
       });
       setTransactions(processed);
       setLoading(false);
     } catch (err) { setLoading(false); }
   };
 
-  // 🟢 Combined Filter Logic (Plan + Date Range)
   const filteredData = useMemo(() => {
     return transactions.filter(tx => {
       const txDate = new Date(tx.created_at).setHours(0,0,0,0);
@@ -130,16 +150,17 @@ export default function History() {
   const exportToExcel = () => {
     const data = filteredData.map(tx => ({
       Package: tx.package_name || "X1",
+      Batch: `Batch #${tx.batch_no || "N/A"}`,
       Type: tx.income_type,
       Date: new Date(tx.created_at).toLocaleDateString(),
       Amount: `$${Number(tx.amount).toFixed(2)}`,
       Balance: `$${Number(tx.balanceAfter).toFixed(2)}`,
-      Status: tx.days_remaining > 0 ? `${tx.days_remaining} Days Left` : "Matured"
+      Contract_Progress: tx.progressLabel
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Earnings");
-    XLSX.writeFile(workbook, `Profit_Report_${filter}_${new Date().toLocaleDateString()}.xlsx`);
+    XLSX.writeFile(workbook, `Profit_Report_${new Date().toLocaleDateString()}.xlsx`);
   };
 
   return (
@@ -175,17 +196,34 @@ export default function History() {
         <>
           <TableContainer>
             <Table>
-              <thead style={{background:'rgba(255,255,255,0.02)'}}>
+              <thead>
                 <tr>
-                  <Th>Package & Plan</Th><Th>Date</Th><Th>Contract Status</Th><Th style={{textAlign:'right'}}>Amount</Th><Th style={{textAlign:'right'}}>Balance</Th>
+                  <Th>Package & Plan</Th>
+                  <Th>Batch No.</Th>
+                  <Th>Payout Date</Th>
+                  <Th>Contract Progress</Th>
+                  <Th style={{textAlign:'right'}}>Amount</Th>
+                  <Th style={{textAlign:'right'}}>Ledger Balance</Th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedData.map((tx, i) => (
                   <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,0.03)'}}>
-                    <Td><strong>{tx.package_name || "X1"}</strong><br/><small style={{color:'#666'}}>{tx.income_type}</small></Td>
-                    <Td>{new Date(tx.created_at).toLocaleDateString()}<br/><small style={{color:'#555'}}>{new Date(tx.created_at).toLocaleTimeString()}</small></Td>
-                    <Td><ExpiryBadge days={tx.days_remaining}><Calendar size={12}/>{tx.days_remaining > 0 ? `${tx.days_remaining} Days` : "Matured"}</ExpiryBadge></Td>
+                    <Td>
+                      <strong>{tx.package_name || "X1"}</strong><br/>
+                      <small style={{color:'#3ea6ff', fontWeight: 600}}>{tx.income_type}</small>
+                    </Td>
+                    <Td><BatchTag>#{tx.batch_no || "N/A"}</BatchTag></Td>
+                    <Td>
+                        {new Date(tx.created_at).toLocaleDateString()}<br/>
+                        <small style={{color:'#555'}}>{new Date(tx.created_at).toLocaleTimeString()}</small>
+                    </Td>
+                    <Td>
+                        <StatusBadge $isMatured={tx.days_remaining <= 0}>
+                            <TrendingUp size={12}/>
+                            {tx.days_remaining > 0 ? tx.progressLabel : "Matured"}
+                        </StatusBadge>
+                    </Td>
                     <Td style={{textAlign:'right', color:'#2ecc71', fontWeight:700}}>+${Number(tx.amount).toFixed(2)}</Td>
                     <Td style={{textAlign:'right', fontFamily:'monospace', color:'#888'}}>${Number(tx.balanceAfter).toFixed(2)}</Td>
                   </tr>
