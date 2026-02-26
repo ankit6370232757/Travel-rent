@@ -5,10 +5,11 @@ import {
   Users, Network, User, Hash, Layers, 
   BarChart2, IdCard, Share2, Search, 
   FileSpreadsheet, ChevronLeft, ChevronRight,
-  Calendar, Filter
+  Calendar, Filter, Copy, CheckCircle2, Info
 } from "lucide-react";
 import api from "../api/axios";
 import * as XLSX from "xlsx"; 
+import toast from "react-hot-toast";
 
 // --- STYLED COMPONENTS ---
 
@@ -18,9 +19,7 @@ const Card = styled(motion.div)`
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
   padding: 30px;
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 30px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   @media (max-width: 768px) { padding: 20px; }
@@ -32,21 +31,12 @@ const Header = styled.div`
   flex-wrap: wrap; gap: 15px;
 `;
 
-const TitleGroup = styled.div`
-  display: flex; align-items: center; gap: 12px;
-`;
+const TitleGroup = styled.div` display: flex; align-items: center; gap: 12px; `;
 
 const TotalBadge = styled.div`
   background: linear-gradient(90deg, #3ea6ff, #2d55ff);
-  padding: 6px 16px;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 15px rgba(62, 166, 255, 0.2);
+  padding: 6px 16px; border-radius: 12px; color: #fff; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(62, 166, 255, 0.2);
 `;
 
 const IconBox = styled.div`
@@ -55,12 +45,9 @@ const IconBox = styled.div`
 `;
 
 const Title = styled.h3` margin: 0; font-size: 18px; font-weight: 700; color: #fff; `;
-
 const Subtitle = styled.div` font-size: 13px; color: #888; margin-top: 4px; `;
 
-const ActionGroup = styled.div`
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-`;
+const ActionGroup = styled.div` display: flex; align-items: center; gap: 12px; flex-wrap: wrap; `;
 
 const SearchWrapper = styled.div`
   position: relative; display: flex; align-items: center;
@@ -76,19 +63,18 @@ const SearchWrapper = styled.div`
 const FilterSelect = styled.select`
   background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none; cursor: pointer;
-  option { background: #141419; color: #fff; }
 `;
 
 const ExportBtn = styled.button`
   display: flex; align-items: center; gap: 8px; background: rgba(46, 204, 113, 0.1);
   color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.2); padding: 8px 16px;
-  border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+  border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
   &:hover { background: rgba(46, 204, 113, 0.2); transform: translateY(-2px); }
 `;
 
 const TableContainer = styled.div`
   width: 100%; overflow-x: auto; border-radius: 16px; background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 20px;
 `;
 
 const Table = styled.table` width: 100%; border-collapse: collapse; min-width: 900px; `;
@@ -99,55 +85,56 @@ const Thead = styled.thead`
     padding: 18px 24px; text-align: left; font-size: 11px; font-weight: 700;
     text-transform: uppercase; color: #666; letter-spacing: 0.8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    div { display: flex; align-items: center; gap: 6px; }
   }
 `;
 
 const Tr = styled(motion.tr)`
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   &:hover { background: rgba(255, 255, 255, 0.04); }
-  &:last-child { border-bottom: none; }
-  td { padding: 18px 24px; font-size: 14px; color: #e0e0e0; vertical-align: middle; }
+  td { padding: 18px 24px; font-size: 14px; color: #e0e0e0; }
 `;
 
-// 🟢 ADDED MISSING NameCell DEFINITION
 const NameCell = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  div {
-    display: flex;
-    flex-direction: column;
-    strong { color: #fff; font-weight: 600; font-size: 14px; }
-    small { font-size: 11px; color: #555; }
-  }
+  display: flex; align-items: center; gap: 12px;
+  div { display: flex; flex-direction: column; strong { color: #fff; } small { color: #666; } }
 `;
 
 const LevelBadge = styled.span`
   background: ${props => props.level === 1 ? 'rgba(46, 204, 113, 0.15)' : 'rgba(241, 196, 15, 0.15)'};
   color: ${props => props.level === 1 ? '#2ecc71' : '#f1c40f'};
   padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
-  border: 1px solid ${props => props.level === 1 ? 'rgba(46, 204, 113, 0.2)' : 'rgba(241, 196, 15, 0.2)'};
 `;
 
-const UserIdTag = styled.span`
-  font-family: 'Courier New', monospace; background: rgba(255, 255, 255, 0.05);
-  padding: 6px 10px; border-radius: 6px; color: #ccc; font-size: 12px; font-weight: 600;
+const BonusSection = styled.div`
+  display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-bottom: 30px;
+  @media (max-width: 1024px) { grid-template-columns: 1fr; }
 `;
 
-const PaginationWrapper = styled.div`
-  display: flex; align-items: center; justify-content: center;
-  margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.05);
-  gap: 20px;
-  span { color: #666; font-size: 13px; font-weight: 600; }
+const BonusTable = styled.div`
+  background: rgba(255,255,255,0.03); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05);
+  h4 { margin: 0 0 15px 0; color: #3ea6ff; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+  .row:last-child { border: none; }
+  span { color: #888; } b { color: #2ecc71; }
 `;
 
-const PageBtn = styled.button`
-  background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1);
-  padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  &:disabled { opacity: 0.3; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: #3ea6ff; }
+const ReferralLinkBox = styled.div`
+  background: linear-gradient(90deg, rgba(62, 166, 255, 0.1), rgba(45, 85, 255, 0.05));
+  border: 1px dashed rgba(62, 166, 255, 0.3); border-radius: 16px; padding: 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  @media (max-width: 600px) { flex-direction: column; text-align: center; }
+`;
+
+const LinkInput = styled.div`
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  padding: 12px 15px; border-radius: 10px; color: #fff; font-family: monospace; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+`;
+
+const CopyBtn = styled.button`
+  background: #3ea6ff; color: #fff; border: none; padding: 12px 25px; border-radius: 10px;
+  font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
+  &:hover { transform: scale(1.05); background: #2d55ff; }
 `;
 
 export default function Referrals() {
@@ -159,146 +146,126 @@ export default function Referrals() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // 🟢 User Referral Info
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const referralCode = user.referralCode || "USER123";
+  const inviteLink = `${window.location.origin}/register?ref=${referralCode}`;
+
   useEffect(() => {
     api.get("/referrals/my-network")
-      .then(res => {
-        setNetwork(res.data || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Network Error:", err);
-        setLoading(false);
-      });
+      .then(res => { setNetwork(res.data || []); setLoading(false); })
+      .catch(err => { console.error(err); setLoading(false); });
   }, []);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    toast.success("Referral link copied!");
+  };
 
   const filteredNetwork = useMemo(() => {
     return network.filter(user => {
-      const matchesSearch = 
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.id?.toString().includes(searchTerm) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+      const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || user.id?.toString().includes(searchTerm);
       const matchesLevel = levelFilter === "all" || user.level?.toString() === levelFilter;
-      
-      let matchesWidth = true;
-      const count = Number(user.referral_count || 0);
-      if (widthFilter === "0") matchesWidth = count === 0;
-      else if (widthFilter === "1-5") matchesWidth = count >= 1 && count <= 5;
-      else if (widthFilter === "5+") matchesWidth = count >= 5;
-      else if (widthFilter === "10+") matchesWidth = count >= 10;
-      
-      return matchesSearch && matchesLevel && matchesWidth;
+      return matchesSearch && matchesLevel;
     });
-  }, [network, searchTerm, levelFilter, widthFilter]);
+  }, [network, searchTerm, levelFilter]);
 
-  const totalPages = Math.ceil(filteredNetwork.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentData = filteredNetwork.slice(startIndex, startIndex + itemsPerPage);
 
-  const exportToExcel = () => {
-    const dataToExport = filteredNetwork.map((user, index) => ({
-      No: index + 1,
-      Name: user.name,
-      Email: user.email,
-      Level: user.level,
-      Width: user.referral_count || 0,
-      User_ID: user.id,
-      Join_Date: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "MyNetwork");
-    XLSX.writeFile(workbook, `Network_Report.xlsx`);
-  };
-
   return (
-    <Card initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Header>
-        <TitleGroup>
-          <IconBox><Network size={22} /></IconBox>
-          <div><Title>My Network</Title><Subtitle>Referral Tree Overview</Subtitle></div>
-          {!loading && <TotalBadge><Users size={14} /> {network.length} Total</TotalBadge>}
-        </TitleGroup>
+    <div>
+      {/* 🟢 TOP SECTION: BONUS RULES */}
+      <BonusSection>
+        <BonusTable>
+          <h4><Layers size={18}/> Depth Bonus (D1-D6)</h4>
+          {[
+            {l: 'Level 1', p: '10%'}, {l: 'Level 2', p: '1%'}, {l: 'Level 3', p: '1%'},
+            {l: 'Level 4', p: '0.5%'}, {l: 'Level 5', p: '0.5%'}, {l: 'Level 6', p: '0.5%'}
+          ].map(row => (
+            <div className="row" key={row.l}><span>{row.l}</span><b>{row.p} of Price</b></div>
+          ))}
+        </BonusTable>
+        <BonusTable>
+          <h4><BarChart2 size={18}/> Width Bonus (W1-W9)</h4>
+          <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+             {[
+               {w: 'W1', r: '$10'}, {w: 'W2', r: '$11'}, {w: 'W3', r: '$12'},
+               {w: 'W4', r: '$13'}, {w: 'W5', r: '$14'}, {w: 'W6', r: '$15'},
+               {w: 'W7', r: '$16'}, {w: 'W8', r: '$17'}, {w: 'W9', r: '$18'}
+             ].map(row => (
+               <div className="row" key={row.w} style={{padding:'6px 0'}}><span>Node {row.w}</span><b>{row.r} Reward</b></div>
+             ))}
+          </div>
+        </BonusTable>
+      </BonusSection>
 
-        <ActionGroup>
-          <SearchWrapper>
-            <Search size={16} />
-            <input type="text" placeholder="Search user..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
-          </SearchWrapper>
+      {/* 🟢 MAIN NETWORK TABLE */}
+      <Card initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <Header>
+          <TitleGroup>
+            <IconBox><Network size={22} /></IconBox>
+            <div><Title>Active Network</Title><Subtitle>Your Team Members</Subtitle></div>
+            {!loading && <TotalBadge><Users size={14} /> {network.length} Total</TotalBadge>}
+          </TitleGroup>
 
-          <FilterSelect value={levelFilter} onChange={(e) => { setLevelFilter(e.target.value); setCurrentPage(1); }}>
-            <option value="all">All Levels</option>
-            {[1, 2, 3, 4, 5, 6].map(lvl => <option key={lvl} value={lvl}>Level {lvl}</option>)}
-          </FilterSelect>
+          <ActionGroup>
+            <SearchWrapper>
+              <Search size={16} /><input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </SearchWrapper>
+            <FilterSelect value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+              <option value="all">All Levels</option>
+              {[1,2,3,4,5,6].map(l => <option value={l} key={l}>Level {l}</option>)}
+            </FilterSelect>
+          </ActionGroup>
+        </Header>
 
-          <FilterSelect value={widthFilter} onChange={(e) => { setWidthFilter(e.target.value); setCurrentPage(1); }}>
-            <option value="all">All Widths</option>
-            <option value="0">0 Referrals</option>
-            <option value="1-5">1-5 Referrals</option>
-            <option value="5+">5+ Referrals</option>
-          </FilterSelect>
-
-          <ExportBtn onClick={exportToExcel}><FileSpreadsheet size={18} /> Export</ExportBtn>
-        </ActionGroup>
-      </Header>
-
-      <TableContainer>
-        <Table>
-          <Thead>
-            <tr>
-              <th style={{width: '60px'}}><div><Hash size={14}/> No.</div></th>
-              <th><div><User size={14}/> User Name</div></th>
-              <th><div><Layers size={14}/> Level</div></th>
-              <th><div><BarChart2 size={14}/> Width</div></th>
-              <th><div><Calendar size={14}/> Join Date</div></th>
-              <th><div><IdCard size={14}/> User ID</div></th>
-            </tr>
-          </Thead>
-          <tbody>
-            {loading ? (
-               <tr><td colSpan="6" style={{textAlign:'center', padding:'40px', color:'#666'}}>Loading...</td></tr>
-            ) : currentData.length === 0 ? (
-               <tr><td colSpan="6" style={{textAlign:'center', padding:'60px'}}><Share2 size={40} style={{opacity:0.2}}/><p style={{color:'#888'}}>No results found.</p></td></tr>
-            ) : (
-              currentData.map((user, index) => (
-                <Tr key={user.id || index} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <td><span style={{color: '#444', fontWeight:'700'}}>#{startIndex + index + 1}</span></td>
+        <TableContainer>
+          <Table>
+            <Thead>
+              <tr>
+                <th style={{width:'80px'}}>No.</th>
+                <th>User Details</th>
+                <th>Rank</th>
+                <th>Network Width</th>
+                <th>Join Date</th>
+                <th>User ID</th>
+              </tr>
+            </Thead>
+            <tbody>
+              {loading ? <tr><td colSpan="6" style={{textAlign:'center', padding:'40px'}}>Syncing...</td></tr> : 
+              currentData.map((u, i) => (
+                <Tr key={u.id}>
+                  <td><span style={{color:'#666', fontWeight:700}}>#{startIndex + i + 1}</span></td>
                   <td>
                     <NameCell>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #3ea6ff, #8e2de2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px' }}>{user.name?.charAt(0).toUpperCase()}</div>
-                      <div><strong>{user.name}</strong><small>{user.email}</small></div>
+                       <div style={{width:'35px', height:'35px', borderRadius:'10px', background:'#3ea6ff', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800}}>{u.name?.charAt(0)}</div>
+                       <div><strong>{u.name}</strong><small>{u.email}</small></div>
                     </NameCell>
                   </td>
-                  <td><LevelBadge level={user.level}>Level {user.level}</LevelBadge></td>
-                  <td>
-                    <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                      <div style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
-                        <div style={{ width: `${Math.min((user.referral_count || 0) * 10, 100)}%`, height: '100%', background: '#3ea6ff', borderRadius: '4px' }} />
-                      </div>
-                      <span style={{fontSize:'12px', fontWeight:'700'}}>{user.referral_count || 0}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ color: '#fff', fontSize: '13px' }}>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</span>
-                      <small style={{ color: '#555', fontSize: '11px' }}>{user.created_at ? new Date(user.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</small>
-                    </div>
-                  </td>
-                  <td><UserIdTag>{user.id}</UserIdTag></td>
+                  <td><LevelBadge level={u.level}>Level {u.level}</LevelBadge></td>
+                  <td><div style={{display:'flex', gap:'8px', alignItems:'center'}}><BarChart2 size={14} color="#3ea6ff"/>{u.referral_count || 0} Directs</div></td>
+                  <td><Calendar size={14} style={{marginRight:8}}/>{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td><code style={{background:'rgba(255,255,255,0.05)', padding:'4px 8px', borderRadius:'6px'}}>{u.id}</code></td>
                 </Tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-      </TableContainer>
+              ))}
+            </tbody>
+          </Table>
+        </TableContainer>
 
-      {totalPages > 1 && (
-        <PaginationWrapper>
-          <PageBtn disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft size={16}/></PageBtn>
-          <span>Page {currentPage} of {totalPages}</span>
-          <PageBtn disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight size={16}/></PageBtn>
-        </PaginationWrapper>
-      )}
-    </Card>
+        {/* 🟢 REFERRAL LINK SECTION */}
+        <ReferralLinkBox>
+          <div style={{display:'flex', alignItems:'center', gap: '15px'}}>
+             <div style={{background:'rgba(62, 166, 255, 0.2)', padding:'10px', borderRadius:'50%', color:'#3ea6ff'}}><Share2 size={20}/></div>
+             <div>
+                <strong style={{display:'block', color:'#fff'}}>Invite New Partners</strong>
+                <span style={{fontSize:'12px', color:'#888'}}>Earn up to 10% on every purchase they make.</span>
+             </div>
+          </div>
+          <LinkInput>{inviteLink}</LinkInput>
+          <CopyBtn onClick={copyLink}><Copy size={16}/> Copy Link</CopyBtn>
+        </ReferralLinkBox>
+      </Card>
+    </div>
   );
 }
