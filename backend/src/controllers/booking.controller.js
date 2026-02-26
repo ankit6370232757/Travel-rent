@@ -85,7 +85,7 @@ exports.bookSeat = async(req, res) => {
                 "INSERT INTO income_logs (user_id, amount, income_type, created_at) VALUES ($1, $2, 'OTS_BONUS', NOW())", [userId, otsBonus]
             );
         }
-        await referralService.processReferralBonuses(userId, price);
+        await referralService.processReferralBonuses(userId, price, seatId);
 
         await client.query("COMMIT"); // Save Changes
 
