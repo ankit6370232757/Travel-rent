@@ -88,3 +88,65 @@ exports.processWidthReferral = async(userId) => {
          VALUES ($1, $2, $3)`, [userId, incomeType, reward]
     );
 };
+exports.processReferralBonuses = async(buyerId, ticketPrice) => {
+    let currentUserId = buyerId;
+
+    for (let level = 1; level <= 6; level++) {
+        const userRes = await pool.query(
+            "SELECT referred_by FROM users WHERE id = $1", [currentUserId]
+        );
+
+        if (userRes.rows.length === 0 || !userRes.rows[0].referred_by) {
+            break;
+        }
+
+        const parentId = userRes.rows[0].referred_by;
+
+        // 🟢 1. Fetch Depth Percentage
+        const depthRule = await pool.query(
+            "SELECT percentage FROM referral_depth_rules WHERE level = $1", [level]
+        );
+
+        // 🔒 AUTO-SAVE SAFE: Using standard check instead of ?.
+        let percent = 0;
+        if (depthRule.rows && depthRule.rows.length > 0) {
+            percent = Number(depthRule.rows[0].percentage);
+        }
+
+        let bonusAmount = (ticketPrice * percent) / 100;
+
+        // 🟢 2. Apply Width Fixed Bonus (Direct Referrer Only)
+        if (level === 1) {
+            const countRes = await pool.query(
+                "SELECT COUNT(*) FROM users WHERE referred_by = $1", [parentId]
+            );
+            const refCount = parseInt(countRes.rows[0].count);
+
+            const widthRule = await pool.query(
+                "SELECT reward_amount FROM referral_width_rules WHERE required_referrals = $1", [refCount]
+            );
+
+            // 🔒 AUTO-SAVE SAFE: Using standard check instead of ?.
+            let widthBonus = 0;
+            if (widthRule.rows && widthRule.rows.length > 0) {
+                widthBonus = Number(widthRule.rows[0].reward_amount);
+            }
+
+            bonusAmount += widthBonus;
+        }
+
+        if (bonusAmount > 0) {
+            // 3. Update Wallet
+            await pool.query(
+                "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [bonusAmount, parentId]
+            );
+
+            // 4. Log Transaction
+            await pool.query(
+                "INSERT INTO income_logs (user_id, income_type, amount, created_at) VALUES ($1, $2, $3, NOW())", [parentId, "REFERRAL_L" + level, bonusAmount]
+            );
+        }
+
+        currentUserId = parentId;
+    }
+};

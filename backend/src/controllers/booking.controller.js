@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const referralService = require("../services/referral.service");
 
 // ✅ BOOK SEAT (Updated for Income Plan Selection)
 exports.bookSeat = async(req, res) => {
@@ -84,11 +85,13 @@ exports.bookSeat = async(req, res) => {
                 "INSERT INTO income_logs (user_id, amount, income_type, created_at) VALUES ($1, $2, 'OTS_BONUS', NOW())", [userId, otsBonus]
             );
         }
+        await referralService.processReferralBonuses(userId, price);
 
         await client.query("COMMIT"); // Save Changes
 
         res.status(200).json({
-            message: "Seat booked successfully ✅",
+            success: true,
+            message: "Seat booked successfully and referral bonuses distributed ✅",
             data: {
                 package: pkg.name,
                 plan: incomeType, // Send back selected plan

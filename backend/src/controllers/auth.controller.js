@@ -48,6 +48,8 @@ exports.register = async(req, res) => {
             );
             if (refUser.rows.length > 0) {
                 referredBy = refUser.rows[0].id;
+            } else {
+                return res.status(400).json({ message: "Invalid referral code" });
             }
         }
 
@@ -102,7 +104,7 @@ exports.login = async(req, res) => {
         const user = userRes.rows[0];
 
         // 2. Security Check: Block deactivated users
-        if (user.is_active === false) {
+        if (!user.is_active) {
             return res.status(403).json({
                 message: "Your account has been deactivated. Please contact support."
             });
