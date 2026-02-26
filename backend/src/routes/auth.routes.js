@@ -9,30 +9,23 @@ router.post("/register", authController.register);
 router.post("/login", authController.login);
 
 // PUT /api/auth/update-profile
+// PUT /api/auth/update-profile
 router.put("/update-profile", authMiddleware, async(req, res) => {
     try {
         const userId = req.user.id;
-        // Accept wallet_address now
         const { name, email, password, wallet_address } = req.body;
-
-        if (!name || !email) {
-            return res.status(400).json({ message: "Name and Email are required" });
-        }
 
         let query, params;
 
         if (password && password.length > 0) {
-            // Update WITH password
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
-
+            // 🔴 REMOVED BCRYPT HERE to match your login logic
             query = `
                 UPDATE users 
                 SET name = $1, email = $2, password = $3, wallet_address = $4
                 WHERE id = $5 
                 RETURNING id, name, email, referral_code, wallet_address, role
             `;
-            params = [name, email, hashedPassword, wallet_address, userId];
+            params = [name, email, password, wallet_address, userId]; // Storing password as-is
         } else {
             // Update WITHOUT password
             query = `
@@ -45,12 +38,10 @@ router.put("/update-profile", authMiddleware, async(req, res) => {
         }
 
         const result = await pool.query(query, params);
-
         res.json({ message: "Profile updated successfully", user: result.rows[0] });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error updating profile" });
+        res.status(500).json({ message: "Server error" });
     }
 });
 router.get("/profile", authMiddleware, async(req, res) => {
