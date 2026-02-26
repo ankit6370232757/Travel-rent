@@ -4,8 +4,12 @@ exports.getReferralTree = async(req, res) => {
     try {
         const userId = req.user.id;
 
-        // Recursive Query to get downlines up to 6 levels deep
-        // 🟢 Added 'created_at' to fetch join date and time
+        /**
+         * 🟢 UPDATED SQL QUERY
+         * 1. Added a JOIN with 'income_logs' to calculate the sum of earnings from each user.
+         * 2. Filtered income_logs by the current logged-in user (user_id) AND the source (from_user_id).
+         * 3. Kept the recursive logic for 6 levels of depth.
+         */
         const query = `
             WITH RECURSIVE downline AS (
                 -- Anchor member: direct referrals (Level 1)
@@ -26,16 +30,25 @@ exports.getReferralTree = async(req, res) => {
                 d.name, 
                 d.email, 
                 d.level,
-                d.created_at, -- 🟢 Return join date/time to frontend
+                d.created_at, 
                 -- Subquery to count how many people THIS user has referred (Width)
-                (SELECT COUNT(*) FROM users WHERE referred_by = d.id)::int as referral_count
+                (SELECT COUNT(*) FROM users WHERE referred_by = d.id)::int as referral_count,
+                
+                -- 🟢 NEW: Sum of all bonuses earned by YOU (the logged-in user) from THIS downline member
+                -- Looks for logs where the current user received money FROM this member's actions
+                COALESCE((
+                    SELECT SUM(amount) 
+                    FROM income_logs 
+                    WHERE user_id = $1 AND from_user_id = d.id
+                ), 0)::float as total_bonus
+                
             FROM downline d
             ORDER BY d.level ASC, d.id ASC;
         `;
 
         const result = await pool.query(query, [userId]);
 
-        // Returns: [{ id: 5, name: "John", level: 1, created_at: "2026-02-23T...", referral_count: 3 }, ...]
+        // Returns: [{ id, name, level, created_at, referral_count, total_bonus }, ...]
         res.json(result.rows);
 
     } catch (error) {
