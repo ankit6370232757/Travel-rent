@@ -108,16 +108,19 @@ export default function History() {
     try {
       const [histRes, walletRes] = await Promise.all([api.get("/income/history"), api.get("/wallet")]);
       const liveBalance = Number(walletRes.data.balance);
+      
+      // 🟢 Sort by date NEWEST first to ensure correct Ledger Math
+      const sortedHistory = (histRes.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
       let runningBal = liveBalance;
       
-      const processed = histRes.data.map((tx) => {
+      const processed = sortedHistory.map((tx) => {
         const snapshot = runningBal;
         runningBal -= Number(tx.amount);
 
-        // Calculate Contract Progress Day
-        // Daily: 365, Monthly: 12, Yearly: 1
+        // 🟢 Calculate Progress Day (Min 1)
         const totalDuration = tx.income_type === 'DAILY' ? 365 : (tx.income_type === 'MONTHLY' ? 12 : 1);
-        const currentDay = totalDuration - (tx.days_remaining || 0);
+        const currentDay = Math.max(1, totalDuration - (tx.days_remaining || 0));
 
         return { 
             ...tx, 
@@ -132,9 +135,15 @@ export default function History() {
 
   const filteredData = useMemo(() => {
     return transactions.filter(tx => {
-      const txDate = new Date(tx.created_at).setHours(0,0,0,0);
-      const start = startDate ? new Date(startDate).setHours(0,0,0,0) : null;
-      const end = endDate ? new Date(endDate).setHours(0,0,0,0) : null;
+      // 🟢 Normalizing dates to prevent timezone-based hiding
+      const txDate = new Date(tx.created_at);
+      txDate.setHours(0,0,0,0);
+      
+      const start = startDate ? new Date(startDate) : null;
+      if (start) start.setHours(0,0,0,0);
+      
+      const end = endDate ? new Date(endDate) : null;
+      if (end) end.setHours(0,0,0,0);
 
       const matchesPlan = filter === "ALL" || tx.income_type === filter;
       const matchesStart = !start || txDate >= start;

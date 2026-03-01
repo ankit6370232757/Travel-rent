@@ -159,10 +159,9 @@ const Overview = ({ user }) => {
         <StatCard $bg="rgba(142, 45, 226, 0.1)" $color="#8e2de2" $delay="3s"><div className="icon-box"><Users size={20}/></div><div className="info"><span>Nodes</span><strong>{stats.totalReferrals}</strong></div></StatCard>
       </StatsRow>
       
-      {/* 🟢 Layout Update: Wallet (30%) and Income (70%) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '20px' }}>
-         <div style={{ gridColumn: 'span 3' }}><Wallet /></div>
-         <div style={{ gridColumn: 'span 7' }}><Income /></div>
+      {/* 🟢 Updated Section: Removed Wallet, Income (Earning Analysis) now takes full width */}
+      <div style={{ width: '100%' }}>
+         <Income />
       </div>
     </motion.div>
   );
@@ -179,7 +178,11 @@ export default function DashboardLayout() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogout = () => { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/login"); };
+  const handleLogout = () => { 
+    localStorage.removeItem("token"); 
+    localStorage.removeItem("user"); 
+    navigate("/login"); 
+  };
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("user"));
@@ -188,24 +191,39 @@ export default function DashboardLayout() {
       setUser(userData);
       if (userData.role === 'admin' && activeTab === 'dashboard') setActiveTab('admin-overview');
     }
+    
     api.get("/settings/announcement").then(res => {
       if (res.data) {
         setAnnouncement({ text: res.data.announcement_text, image: res.data.announcement_image });
         const role = user?.role || JSON.parse(localStorage.getItem("user"))?.role;
         const hasSeenPopup = sessionStorage.getItem("announcementSeen");
-        if (res.data.announcement_image && role !== 'admin' && !hasSeenPopup) { setShowModal(true); }
+        if (res.data.announcement_image && role !== 'admin' && !hasSeenPopup) { 
+          setShowModal(true); 
+        }
       }
     });
   }, [user.role, activeTab]);
 
   useEffect(() => {
     if (user && user.role === 'admin') {
-      api.get("/admin/pending-count").then(res => setPendingCount(res.data.count)).catch(err => console.error(err));
+      api.get("/admin/pending-count")
+        .then(res => setPendingCount(res.data.count))
+        .catch(err => console.error(err));
     }
   }, [user]);
 
-  const handleCloseModal = () => { setShowModal(false); sessionStorage.setItem("announcementSeen", "true"); };
-  const handleTabChange = (tabId) => { setActiveTab(tabId); setSidebarOpen(false); if (tabId.startsWith('admin-')) navigate('/admin'); else navigate('/dashboard'); };
+  const handleCloseModal = () => { 
+    setShowModal(false); 
+    sessionStorage.setItem("announcementSeen", "true"); 
+  };
+
+  const handleTabChange = (tabId) => { 
+    setActiveTab(tabId); 
+    setSidebarOpen(false); 
+    if (tabId.startsWith('admin-')) navigate('/admin'); 
+    else navigate('/dashboard'); 
+  };
+
   const isAdminView = activeTab.startsWith("admin-");
 
   return (
@@ -214,39 +232,88 @@ export default function DashboardLayout() {
         {showSplash && <RocketSplash onComplete={() => setShowSplash(false)} />}
         {showModal && announcement.image && !isAdminView && (
           <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleCloseModal}>
-            <AnnouncementCard initial={{ scale: 0.7, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.7, opacity: 0, y: 50 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} onClick={(e) => e.stopPropagation()}>
+            <AnnouncementCard 
+              initial={{ scale: 0.7, opacity: 0, y: 50 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.7, opacity: 0, y: 50 }} 
+              transition={{ type: "spring", damping: 25, stiffness: 300 }} 
+              onClick={(e) => e.stopPropagation()}
+            >
               <ModalClose onClick={handleCloseModal}><X size={18}/></ModalClose>
               <ModalImage src={announcement.image} alt="Promotion" />
-              <ModalContent><h2><Megaphone size={20} /> Notice</h2><p>{announcement.text || "New system updates are now live."}</p><ConfirmButton onClick={handleCloseModal}>Got it!</ConfirmButton></ModalContent>
+              <ModalContent>
+                <h2><Megaphone size={20} /> Notice</h2>
+                <p>{announcement.text || "New system updates are now live."}</p>
+                <ConfirmButton onClick={handleCloseModal}>Got it!</ConfirmButton>
+              </ModalContent>
             </AnnouncementCard>
           </ModalOverlay>
         )}
         {showLogoutModal && (
           <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLogoutModal(false)}>
-            <AnnouncementCard initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <AnnouncementCard 
+              initial={{ scale: 0.8, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.8, opacity: 0 }} 
+              onClick={(e) => e.stopPropagation()} 
+              style={{ maxWidth: '400px' }}
+            >
               <ModalContent style={{ padding: '40px 30px' }}>
-                <div style={{ background: 'rgba(255, 71, 87, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#ff4757' }}><LogOut size={30} /></div>
-                <h2>End Session?</h2><p>Are you sure you want to log out?</p>
-                <LogoutActions><CancelButton onClick={() => setShowLogoutModal(false)}>Stay</CancelButton><LogoutButton onClick={handleLogout}>Log Out</LogoutButton></LogoutActions>
+                <div style={{ background: 'rgba(255, 71, 87, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyCenter: 'center', margin: '0 auto 20px', color: '#ff4757' }}>
+                  <LogOut size={30} />
+                </div>
+                <h2>End Session?</h2>
+                <p>Are you sure you want to log out?</p>
+                <LogoutActions>
+                  <CancelButton onClick={() => setShowLogoutModal(false)}>Stay</CancelButton>
+                  <LogoutButton onClick={handleLogout}>Log Out</LogoutButton>
+                </LogoutActions>
               </ModalContent>
             </AnnouncementCard>
           </ModalOverlay>
         )}
       </AnimatePresence>
-      <MobileHeader><div style={{fontWeight:900, fontSize:'18px'}}>Travel<span style={{color:'#3ea6ff'}}>Rent</span></div><Menu onClick={() => setSidebarOpen(true)} size={22} style={{cursor:'pointer'}} /></MobileHeader>
+
+      <MobileHeader>
+        <div style={{fontWeight:900, fontSize:'18px'}}>Travel<span style={{color:'#3ea6ff'}}>Rent</span></div>
+        <Menu onClick={() => setSidebarOpen(true)} size={22} style={{cursor:'pointer'}} />
+      </MobileHeader>
+
       <SidebarContainer $isOpen={isSidebarOpen}>
-        <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} user={user} pendingCount={pendingCount} isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={() => setShowLogoutModal(true)} />
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={handleTabChange} 
+          user={user} 
+          pendingCount={pendingCount} 
+          isOpen={isSidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+          onLogout={() => setShowLogoutModal(true)} 
+        />
       </SidebarContainer>
+
       <MainContent>
         {announcement.text && !isAdminView && (
           <MarqueeContainer initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <FixedLabel><Bell size={12} style={{marginRight: 6}}/> Info</FixedLabel>
-            <MarqueeText><div className="marquee-item">🚀 {announcement.text}</div><div className="marquee-item">🚀 {announcement.text}</div></MarqueeText>
+            <MarqueeText>
+              <div className="marquee-item">🚀 {announcement.text}</div>
+              <div className="marquee-item">🚀 {announcement.text}</div>
+            </MarqueeText>
           </MarqueeContainer>
         )}
+
         <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, rotateX: 5, y: 10 }} animate={{ opacity: 1, rotateX: 0, y: 0 }} exit={{ opacity: 0, rotateX: -5, y: -10 }} transition={{ type: "spring", stiffness: 120, damping: 20 }} style={{ transformStyle: 'preserve-3d', width: '100%' }}>
-             {isAdminView ? ( <AdminPanel initialView={activeTab.replace("admin-", "")} /> ) : (
+          <motion.div 
+            key={activeTab} 
+            initial={{ opacity: 0, rotateX: 5, y: 10 }} 
+            animate={{ opacity: 1, rotateX: 0, y: 0 }} 
+            exit={{ opacity: 0, rotateX: -5, y: -10 }} 
+            transition={{ type: "spring", stiffness: 120, damping: 20 }} 
+            style={{ transformStyle: 'preserve-3d', width: '100%' }}
+          >
+             {isAdminView ? ( 
+               <AdminPanel initialView={activeTab.replace("admin-", "")} /> 
+             ) : (
               activeTab === "wallet" ? <Wallet /> :
               activeTab === "withdraw" ? <Withdraw /> :
               activeTab === "history" ? <History /> :
@@ -259,6 +326,7 @@ export default function DashboardLayout() {
           </motion.div>
         </AnimatePresence>
       </MainContent>
+
       <ChatBot />
     </LayoutWrapper>
   );
