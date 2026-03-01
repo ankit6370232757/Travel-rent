@@ -5,76 +5,74 @@ const pool = require("../config/db");
  * Rule: Pays daily for 365 days, STARTING ONLY after the batch is full.
  */
 exports.runDailyIncome = async() => {
-    console.log("🔄 Starting Daily Income Distribution...");
+    console.log("🔄 Starting Daily Income Distribution (Catch-Up Mode)...");
 
     try {
-        const packages = await pool.query("SELECT * FROM packages");
+        // 1. Fetch all active DAILY seats with days remaining
+        // We join with packages to get the default daily_income if the seat doesn't have one
+        const activeSeats = await pool.query(
+            `SELECT s.id, s.user_id, s.package_id, s.daily_income as seat_daily, 
+                    s.last_payout, s.days_remaining, p.daily_income as pkg_daily
+             FROM seats s
+             JOIN packages p ON s.package_id = p.id
+             WHERE s.status = 'OCCUPIED' 
+             AND s.income_type = 'DAILY' 
+             AND s.days_remaining > 0`
+        );
 
-        for (const pkg of packages.rows) {
-            const BATCH_SIZE = pkg.total_seats || 180;
+        for (const seat of activeSeats.rows) {
+            const lastPayout = new Date(seat.last_payout);
+            const today = new Date();
 
-            // 1. Identify Full Batches and find the Completion Date (Max booked_at)
-            const fullBatchesRes = await pool.query(
-                `SELECT batch_number, MAX(booked_at) as completion_date 
-                 FROM seats 
-                 WHERE package_id = $1 AND status = 'OCCUPIED' 
-                 GROUP BY batch_number 
-                 HAVING COUNT(*)::int >= $2::int`, [pkg.id, BATCH_SIZE]
-            );
+            // 2. Calculate missed days (24-hour gaps)
+            const diffTime = Math.abs(today - lastPayout);
+            const missedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-            for (const batch of fullBatchesRes.rows) {
-                const batchNum = batch.batch_number;
-                const completionDate = new Date(batch.completion_date);
-                const today = new Date();
+            if (missedDays > 0) {
+                // Determine how many days we can actually pay based on contract limit
+                const daysToPay = Math.min(missedDays, seat.days_remaining);
+                const dailyAmount = Number(seat.seat_daily) > 0 ? Number(seat.seat_daily) : Number(seat.pkg_daily);
+                const totalAmount = dailyAmount * daysToPay;
 
-                // Calculate days passed since the BATCH was finalized
-                const diffTime = Math.abs(today - completionDate);
-                const daysSinceCompletion = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-                // 🟢 RULE: Only pay if within the 365-day window of batch completion
-                // Starts paying 1 day after the batch is full
-                if (daysSinceCompletion > 365 || daysSinceCompletion < 1) continue;
-
-                // 2. Fetch Daily-plan seats in this specific finalized batch
-                const seatRes = await pool.query(
-                    `SELECT id, user_id, daily_income 
-                     FROM seats 
-                     WHERE package_id = $1 AND batch_number = $2
-                     AND status = 'OCCUPIED' AND income_type = 'DAILY'`, [pkg.id, batchNum]
-                );
-
-                for (const seat of seatRes.rows) {
-                    const incomeAmount = Number(seat.daily_income) > 0 ?
-                        Number(seat.daily_income) :
-                        Number(pkg.daily_income);
-
-                    const exists = await pool.query(
-                        `SELECT 1 FROM income_cycles 
-                         WHERE seat_id = $1 AND income_type = 'DAILY' 
-                         AND cycle_date = CURRENT_DATE`, [seat.id]
+                if (totalAmount > 0) {
+                    // 3. Update User Wallet (Total sum for all missed days)
+                    await pool.query(
+                        "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [totalAmount, seat.user_id]
                     );
 
-                    if (exists.rows.length > 0) continue;
+                    // 4. Create separate logs for EVERY missed day so they show in History
+                    for (let i = 1; i <= daysToPay; i++) {
+                        // Calculate the specific date for each log entry
+                        const logDate = new Date(lastPayout);
+                        logDate.setDate(logDate.getDate() + i);
+                        const logDateString = logDate.toISOString().split('T')[0];
 
-                    if (incomeAmount > 0) {
-                        await pool.query(
-                            "UPDATE wallets SET balance = COALESCE(balance, 0) + $1 WHERE user_id = $2", [incomeAmount, seat.user_id]
-                        );
-
+                        // Insert into income_logs for the History page
                         await pool.query(
                             `INSERT INTO income_logs (user_id, package_id, seat_id, income_type, amount, created_at)
-                             VALUES ($1, $2, $3, 'DAILY', $4, NOW())`, [seat.user_id, pkg.id, seat.id, incomeAmount]
+                             VALUES ($1, $2, $3, 'DAILY', $4, $5)`, [seat.user_id, seat.package_id, seat.id, dailyAmount, logDate]
                         );
 
+                        // Insert into income_cycles to prevent duplicate payout for this specific date
                         await pool.query(
                             `INSERT INTO income_cycles (user_id, seat_id, income_type, cycle_date)
-                             VALUES ($1, $2, 'DAILY', CURRENT_DATE)`, [seat.user_id, seat.id]
+                             VALUES ($1, $2, 'DAILY', $3)`, [seat.user_id, seat.id, logDateString]
                         );
                     }
+
+                    // 5. Update the seat's contract progress and timestamp
+                    await pool.query(
+                        `UPDATE seats 
+                         SET days_remaining = days_remaining - $1, 
+                             last_payout = NOW() 
+                         WHERE id = $2`, [daysToPay, seat.id]
+                    );
+
+                    console.log(`✅ Paid ${daysToPay} day(s) to User ${seat.user_id} for Seat ${seat.id}`);
                 }
             }
         }
-        console.log("✅ Daily Income Completed.");
+        console.log("✅ Daily Income Distribution Completed.");
     } catch (err) {
         console.error("❌ Daily Income Failed:", err.message);
     }
