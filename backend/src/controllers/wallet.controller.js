@@ -12,8 +12,22 @@ exports.getWallet = async(req, res) => {
 // ✅ NEW: Deposit Request
 exports.requestDeposit = async(req, res) => {
     try {
-        const { amount } = req.body;
-        const result = await walletService.requestDeposit(req.user.id, amount);
+        const userId = req.user.id;
+        const { amount, utrNumber } = req.body;
+
+        if (!utrNumber || utrNumber.trim().length < 8) {
+            return res.status(400).json({ message: "A valid UTR/Transaction ID is required." });
+        }
+
+        // Check for duplicate UTR to prevent fraud
+        const duplicateCheck = await pool.query(
+            "SELECT id FROM deposits WHERE utr_number = $1", [utrNumber]
+        );
+        if (duplicateCheck.rows.length > 0) {
+            return res.status(400).json({ message: "This UTR has already been submitted." });
+        }
+
+        const result = await walletService.requestDeposit(userId, amount, utrNumber);
         res.json(result);
     } catch (err) {
         res.status(400).json({ message: err.message });
