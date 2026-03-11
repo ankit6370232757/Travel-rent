@@ -1,29 +1,27 @@
 const pool = require("../config/db");
 const referralService = require("../services/referral.service");
 
-// ✅ BOOK SEAT (Updated for Income Plan Selection)
+// ✅ BOOK SEAT (Fully Functional)
 exports.bookSeat = async(req, res) => {
-    const client = await pool.connect(); // Use a client for transactions
+    const client = await pool.connect();
     try {
         const userId = req.user.id;
-        // 🚀 RECEIVE 'incomeType' FROM FRONTEND
         const { packageName, incomeType } = req.body;
 
+        // 1. Validation
         if (!packageName) {
             return res.status(400).json({ message: "Package name is required" });
         }
 
-        // 🛡️ Validate Income Type
         const validTypes = ["DAILY", "MONTHLY", "YEARLY"];
         if (!incomeType || !validTypes.includes(incomeType)) {
             return res.status(400).json({ message: "Invalid Income Plan selected" });
         }
 
-        await client.query("BEGIN"); // Start Transaction
+        await client.query("BEGIN");
 
-        // 1. Get Package Details
+        // 2. Get Package Details
         const pkgRes = await client.query("SELECT * FROM packages WHERE name = $1", [packageName]);
-
         if (pkgRes.rows.length === 0) {
             throw new Error("Package not found");
         }
@@ -32,7 +30,7 @@ exports.bookSeat = async(req, res) => {
         const BATCH_SIZE = pkg.total_seats || 180;
         const price = parseFloat(pkg.ticket_price);
 
-        // 2. Check User Wallet Balance
+        // 3. Check User Wallet Balance
         const walletRes = await client.query("SELECT balance FROM wallets WHERE user_id = $1", [userId]);
         const userBalance = parseFloat((walletRes.rows[0] && walletRes.rows[0].balance) || 0);
 
@@ -40,7 +38,7 @@ exports.bookSeat = async(req, res) => {
             throw new Error(`Insufficient Balance. Required: $${price}, Available: $${userBalance}`);
         }
 
-        // 3. Calculate Batch & Seat Number
+        // 4. Calculate Batch & Seat Number
         const countRes = await client.query(
             "SELECT COUNT(*) FROM seats WHERE package_id = $1 AND status = 'OCCUPIED'", [pkg.id]
         );
@@ -49,30 +47,25 @@ exports.bookSeat = async(req, res) => {
         const currentBatch = Math.floor(totalSold / BATCH_SIZE) + 1;
         const seatInBatch = (totalSold % BATCH_SIZE) + 1;
 
-        // 4. Calculate OTS (Instant Bonus)
-        const sixPercent = price * 0.06;
-        const otsBonus = sixPercent / seatInBatch;
+        // 5. Calculate OTS (Instant Bonus)
+        const otsBonus = (price * 0.06) / seatInBatch;
 
-        // 5. Deduct Ticket Price from Wallet
+        // 6. Deduct Ticket Price from Wallet
         await client.query(
             "UPDATE wallets SET balance = balance - $1 WHERE user_id = $2", [price, userId]
         );
 
-        // 6. Create Seat Record (🚀 SAVING INCOME TYPE)
-        // Make sure your 'seats' table has an 'income_type' column!
-        // If not, run: ALTER TABLE seats ADD COLUMN income_type VARCHAR(20) DEFAULT 'DAILY';
-        await client.query(
+        // 7. Create Seat Record & CAPTURE THE ID 🚀
+        // Added last_payout and days_remaining so Cron job works correctly
+        const seatInsertRes = await client.query(
             `INSERT INTO seats (
                 user_id, package_id, seat_number, batch_number, status, 
-                booked_at, ots_income, income_type
-            ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6) RETURNING id`, [userId, pkg.id, seatInBatch, currentBatch, otsBonus, incomeType]
+                booked_at, ots_income, income_type, last_payout, days_remaining
+            ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, NOW(), 365) 
+            RETURNING id`, [userId, pkg.id, seatInBatch, currentBatch, otsBonus, incomeType]
         );
 
-        // // 7. Record Investment as a Withdrawal (History)
-        // await client.query(
-        //     `INSERT INTO withdrawals (user_id, amount, fee, net_amount, status, created_at) 
-        //      VALUES ($1, $2, 0, $2, 'APPROVED', NOW())`, [userId, price]
-        // );
+        const seatId = seatInsertRes.rows[0].id; // ✅ Now seatId is defined for referrals
 
         // 8. PAY INSTANT BONUS (Credit to Wallet)
         if (otsBonus > 0) {
@@ -80,25 +73,26 @@ exports.bookSeat = async(req, res) => {
                 "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [otsBonus, userId]
             );
 
-            // Log Income
+            // Log OTS Income
             await client.query(
-                "INSERT INTO income_logs (user_id, amount, income_type, created_at) VALUES ($1, $2, 'OTS_BONUS', NOW())", [userId, otsBonus]
+                "INSERT INTO income_logs (user_id, amount, income_type, seat_id, created_at) VALUES ($1, $2, 'OTS_BONUS', $3, NOW())", [userId, otsBonus, seatId]
             );
         }
+
+        // 9. Process Referral Bonuses (Using the new seatId) 🚀
         await referralService.processReferralBonuses(userId, price, seatId);
 
-        await client.query("COMMIT"); // Save Changes
+        await client.query("COMMIT");
 
         res.status(200).json({
             success: true,
-            message: "Seat booked successfully and referral bonuses distributed ✅",
+            message: "Seat booked successfully! ✅",
             data: {
                 package: pkg.name,
-                plan: incomeType, // Send back selected plan
+                plan: incomeType,
                 batch: currentBatch,
                 seat: seatInBatch,
-                bonus: otsBonus.toFixed(4),
-                price: price
+                bonus: otsBonus.toFixed(4)
             }
         });
 
