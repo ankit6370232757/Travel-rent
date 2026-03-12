@@ -126,7 +126,7 @@ exports.getAllBookings = async(req, res) => {
                 s.booked_at, 
                 s.income_type,
                 p.name as package_name, 
-                p.ticket_price as price, -- Aliased for frontend consistency
+                p.ticket_price, -- Aliased for frontend consistency
                 u.id as user_id,        -- 👈 CRITICAL: Added this to fix #N/A
                 u.email,
                 u.name as user_name
