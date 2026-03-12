@@ -124,9 +124,10 @@ exports.getAllBookings = async(req, res) => {
                 s.seat_number, 
                 s.batch_number,
                 s.booked_at, 
-                s.income_type,  -- 👈 Fetch Plan Type
+                s.income_type,
                 p.name as package_name, 
-                p.ticket_price, 
+                p.ticket_price as price, -- Aliased for frontend consistency
+                u.id as user_id,        -- 👈 CRITICAL: Added this to fix #N/A
                 u.email,
                 u.name as user_name
             FROM seats s
@@ -139,7 +140,7 @@ exports.getAllBookings = async(req, res) => {
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
-        console.error(err);
+        console.error("Fetch Bookings Error:", err);
         res.status(500).json({ message: "Failed to fetch bookings" });
     }
 };
