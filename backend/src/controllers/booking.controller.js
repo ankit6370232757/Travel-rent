@@ -56,17 +56,28 @@ exports.bookSeat = async(req, res) => {
         );
 
         // 7. Create Seat Record & CAPTURE THE ID 🚀
-        // Added last_payout and days_remaining so Cron job works correctly
+        // Updated to include income values from the package
         const seatInsertRes = await client.query(
             `INSERT INTO seats (
-                user_id, package_id, seat_number, batch_number, status, 
-                booked_at, ots_income, income_type, last_payout, days_remaining
-            ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, NOW(), 365) 
-            RETURNING id`, [userId, pkg.id, seatInBatch, currentBatch, otsBonus, incomeType]
+        user_id, package_id, seat_number, batch_number, status, 
+        booked_at, ots_income, income_type, 
+        daily_income, monthly_income, yearly_income, -- 👈 ADDED THESE COLUMNS
+        last_payout, days_remaining
+    ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, $7, $8, $9, NOW(), 365) 
+    RETURNING id`, [
+                userId,
+                pkg.id,
+                seatInBatch,
+                currentBatch,
+                otsBonus,
+                incomeType,
+                pkg.daily_income, // 👈 ADDED VALUE
+                pkg.monthly_income, // 👈 ADDED VALUE
+                pkg.yearly_income // 👈 ADDED VALUE
+            ]
         );
 
-        const seatId = seatInsertRes.rows[0].id; // ✅ Now seatId is defined for referrals
-
+        const seatId = seatInsertRes.rows[0].id;
         // 8. PAY INSTANT BONUS (Credit to Wallet)
         if (otsBonus > 0) {
             await client.query(

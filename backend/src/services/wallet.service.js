@@ -18,18 +18,14 @@ exports.getWallet = async(userId) => {
  * Request a Deposit (User uploads proof, Admin approves later)
  * ✅ NEW FUNCTION
  */
-exports.requestDeposit = async(userId, amount, utrNumber) => {
+exports.requestDeposit = async(userId, amount) => {
     if (!amount || amount <= 0) {
         throw new Error("Invalid amount");
     }
-    if (!utrNumber) {
-        throw new Error("UTR Number is required for verification");
-    }
-
-    // Insert into deposits table with utr_number
+    // Insert into deposits table (Status: PENDING)
     await pool.query(
-        `INSERT INTO deposits (user_id, amount, utr_number, status)
-         VALUES ($1, $2, $3, 'PENDING')`, [userId, amount, utrNumber]
+        `INSERT INTO deposits (user_id, amount, status)
+         VALUES ($1, $2, 'PENDING')`, [userId, amount]
     );
 
     return { message: "Deposit request submitted. Waiting for admin approval." };
