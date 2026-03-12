@@ -13,7 +13,7 @@ const Card = styled(motion.div)`
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
-  padding: 30px;
+  padding: 25px;
   min-height: 500px;
 `;
 
@@ -104,7 +104,7 @@ export default function Income() {
             <BarChart3 size={22} />
           </div>
           <div>
-            <h3 style={{ margin: 0, color: '#fff' }}>Earnings Analytics</h3>
+            <h3 style={{ margin: 0, color: '#fff' }}>Growth Analytics</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
               <span style={{ fontSize: '11px', color: '#666', fontWeight: 700 }}>{viewType.toUpperCase()} REVENUE</span>
               <GrowthIndicator $isPositive={Number(analytics.growth) >= 0}>
@@ -132,7 +132,7 @@ export default function Income() {
         <ProgressContainer>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '14px', fontWeight: 600 }}>
-              <Target size={16} color="#3ea6ff" /> Weekly Earning Goal
+              <Target size={16} color="#3ea6ff" /> Weekly Goal
             </div>
             <span style={{ color: '#3ea6ff', fontWeight: 700, fontSize: '14px' }}>
               ${analytics.thisWeekTotal.toLocaleString()} / ${WEEKLY_GOAL}
@@ -173,7 +173,7 @@ export default function Income() {
         ) : (
           <div style={{ textAlign: 'center', padding: '80px', color: '#444' }}>
             <TrendingUp size={48} style={{ opacity: 0.1, marginBottom: '15px' }} />
-            <p>No investment cycles detected.</p>
+            <p>No Active cycles detected.</p>
           </div>
         )}
       </div>
@@ -182,8 +182,8 @@ export default function Income() {
       <DescriptionBox>
         <Info size={20} color="#3ea6ff" style={{ flexShrink: 0 }} />
         <p>
-          <strong>Data Intelligence:</strong> This graph visualizes your net profit trends derived strictly from 
-          <strong> Daily, Monthly, and Yearly package earnings</strong>. 
+          <strong>Data Intelligence:</strong> This graph visualizes your net growth trends derived strictly from 
+          <strong> Daily, Monthly, and Yearly package mode</strong>. 
           The <strong>Daily</strong> view tracks day-over-day performance, while the <strong>Total</strong> view 
           displays accumulated maturity across all finalized batches. 
           Revenue is logged 24 hours after a batch reaches 100% capacity.

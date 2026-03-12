@@ -280,8 +280,8 @@ export default function Packages() {
       {showConfetti && <Confetti numberOfPieces={800} gravity={0.2} style={{zIndex: 9999, position: 'fixed', top: 0, left: 0, width: '100%', height: '100%'}} />}
 
       <Header>
-        <h2>Investment Packages</h2>
-        <p>Choose a plan that fits your goals and start earning.</p>
+        <h2>Packages</h2>
+        <p>Choose a plan that fits your goals.</p>
       </Header>
       
       <Grid initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
@@ -303,7 +303,7 @@ export default function Packages() {
             >
               <CardTop>
                 <IconWrapper $gradient={style.gradient}>{style.icon}</IconWrapper>
-                {data?.currentBatch && <BatchBadge>Batch #{data.currentBatch}</BatchBadge>}
+                {data?.currentBatch && <BatchBadge>Slot #{data.currentBatch}</BatchBadge>}
               </CardTop>
               
               <div>
@@ -353,7 +353,7 @@ export default function Packages() {
                  const info = calculateNextSeatInfo(selectedPkg);
                  return (
                    <InfoBox>
-                     <h4><Zap size={14}/> LIVE JOINING BONUS</h4>
+                     <h4><Zap size={14}/> LIVE ONBOARDING BONUS</h4>
                      <div className="grid">
                        <div><small>Your Batch</small><b>#{info.batch}</b></div>
                        <div><small>Seat No</small><b>#{info.seat}</b></div>
