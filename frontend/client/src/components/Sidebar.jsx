@@ -334,7 +334,7 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                    <TrendingUp size={18} /> Earning History
                 </MenuItem>
                 <MenuItem $active={activeTab === "earnings"} onClick={() => handleNav("earnings")}>
-                <BarChart2 size={18} /> Earning Analytics
+                <BarChart2 size={18} /> Growth Analytics
                 </MenuItem>
                 <MenuItem $active={activeTab === "settings"} onClick={() => handleNav("settings")}>
                   <SettingsIcon size={18} /> Settings
