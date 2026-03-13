@@ -244,7 +244,7 @@ exports.deletePackage = async(req, res) => {
     }
 };
 exports.getAllRequests = async(req, res) => {
-   try {
+    try {
         const query = `
             SELECT 
                 d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, 
@@ -279,26 +279,36 @@ exports.handleRequest = async(req, res) => {
     try {
         const { id, type, action } = req.body;
         await client.query("BEGIN");
+
+        // 🛡️ Standardize the final status string
         const finalStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
 
         if (type === 'DEPOSIT') {
             const dep = await client.query("SELECT * FROM deposits WHERE id = $1 FOR UPDATE", [id]);
+            if (!dep.rows.length) throw new Error("Deposit not found");
+
             if (action === 'APPROVE') {
                 await client.query("UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [dep.rows[0].amount, dep.rows[0].user_id]);
             }
+            // ✅ Change 'action' to 'finalStatus'
             await client.query("UPDATE deposits SET status = $1 WHERE id = $2", [finalStatus, id]);
-        } else {
+
+        } else if (type === 'WITHDRAW') {
             const wd = await client.query("SELECT * FROM withdrawals WHERE id = $1 FOR UPDATE", [id]);
+            if (!wd.rows.length) throw new Error("Withdrawal not found");
+
             if (action === 'REJECT') {
-                await client.query("UPDATE wallets SET balance = balance + $1, locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].net_amount, wd.rows[0].user_id]);
+                await client.query("UPDATE wallets SET balance = balance + $1, locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].amount, wd.rows[0].user_id]);
             } else {
-                await client.query("UPDATE wallets SET locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].net_amount, wd.rows[0].user_id]);
+                await client.query("UPDATE wallets SET locked_balance = locked_balance - $1 WHERE user_id = $2", [wd.rows[0].amount, wd.rows[0].user_id]);
             }
+            // ✅ Change 'action' to 'finalStatus'
             await client.query("UPDATE withdrawals SET status = $1 WHERE id = $2", [finalStatus, id]);
         }
 
         await client.query("COMMIT");
-        res.json({ message: Request `${finalStatus}` });
+        res.json({ message: `Request ${finalStatus}` });
+
     } catch (error) {
         await client.query("ROLLBACK");
         res.status(500).json({ message: error.message });
@@ -306,7 +316,6 @@ exports.handleRequest = async(req, res) => {
         client.release();
     }
 };
-
 exports.getPendingRequests = async(req, res) => {
     try {
         const deposits = await pool.query(
