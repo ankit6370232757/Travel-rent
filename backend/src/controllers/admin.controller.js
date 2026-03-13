@@ -511,7 +511,7 @@ exports.getAllFinanceLogs = async(req, res) => {
 };
 exports.getPendingCount = async(req, res) => {
     try {
-        const query = "SELECT COUNT(*) FROM transactions WHERE status = 'PENDING'";
+        const query = "SELECT COUNT(*) FROM deposits WHERE status = 'PENDING'";
         const result = await pool.query(query);
 
         res.json({
