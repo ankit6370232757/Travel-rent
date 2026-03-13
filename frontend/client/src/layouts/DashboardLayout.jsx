@@ -22,6 +22,7 @@ import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
 import AdminPanel from "../dashboard/AdminPanel";
 import EarningHistory from "../dashboard/EarningHistory";
+import AdminRequests from "../dashboard/admin/AdminRequests"; // 👈 Yeh line add karo
 
 // --- ANIMATIONS ---
 const marquee = keyframes`
@@ -143,7 +144,7 @@ const Overview = ({ user }) => {
     }).catch(e => console.error(e));
   }, []);
 
-  return (
+ return (
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
       <div style={{ marginBottom: '20px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>
@@ -160,7 +161,6 @@ const Overview = ({ user }) => {
         <StatCard $bg="rgba(142, 45, 226, 0.1)" $color="#8e2de2" $delay="3s"><div className="icon-box"><Users size={20}/></div><div className="info"><span>Nodes</span><strong>{stats.totalReferrals}</strong></div></StatCard>
       </StatsRow>
       
-      {/* 🟢 Updated Section: Removed Wallet, Income (Earning Analysis) now takes full width */}
       <div style={{ width: '100%' }}>
          <Income />
       </div>
@@ -177,12 +177,34 @@ export default function DashboardLayout() {
   const [showModal, setShowModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [allRequests, setAllRequests] = useState([]); // 👈 Missing State Added
   const navigate = useNavigate();
 
   const handleLogout = () => { 
     localStorage.removeItem("token"); 
     localStorage.removeItem("user"); 
     navigate("/login"); 
+  };
+
+  // ✅ Function to fetch admin requests
+  const fetchAllRequests = async () => {
+    try {
+      const res = await api.get("/admin/requests");
+      setAllRequests(res.data);
+    } catch (err) {
+      console.error("Failed to fetch admin requests", err);
+    }
+  };
+
+  // ✅ Admin Action Handler (Approve/Reject)
+  const handleAdminAction = async (id, type, action) => {
+    try {
+      await api.post("/admin/handle", { id, type, action });
+      toast.success(`Request ${action}ED successfully`);
+      fetchAllRequests(); // Refresh list after action
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Action failed");
+    }
   };
 
   useEffect(() => {
@@ -210,8 +232,10 @@ export default function DashboardLayout() {
       api.get("/admin/pending-count")
         .then(res => setPendingCount(res.data.count))
         .catch(err => console.error(err));
+      
+      fetchAllRequests(); // 👈 Initial admin data fetch
     }
-  }, [user]);
+  }, [user, activeTab]);
 
   const handleCloseModal = () => { 
     setShowModal(false); 
@@ -260,7 +284,7 @@ export default function DashboardLayout() {
               style={{ maxWidth: '400px' }}
             >
               <ModalContent style={{ padding: '40px 30px' }}>
-                <div style={{ background: 'rgba(255, 71, 87, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyCenter: 'center', margin: '0 auto 20px', color: '#ff4757' }}>
+                <div style={{ background: 'rgba(255, 71, 87, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#ff4757' }}>
                   <LogOut size={30} />
                 </div>
                 <h2>End Session?</h2>
@@ -312,9 +336,23 @@ export default function DashboardLayout() {
             transition={{ type: "spring", stiffness: 120, damping: 20 }} 
             style={{ transformStyle: 'preserve-3d', width: '100%' }}
           >
-             {isAdminView ? ( 
-               <AdminPanel initialView={activeTab.replace("admin-", "")} /> 
-             ) : (
+            {isAdminView ? (
+              activeTab === "admin-deposits" ? (
+                <AdminRequests 
+                  requests={allRequests} 
+                  onHandleAction={handleAdminAction} 
+                  forceType="DEPOSIT" 
+                />
+              ) : activeTab === "admin-withdrawals" ? (
+                <AdminRequests 
+                  requests={allRequests} 
+                  onHandleAction={handleAdminAction} 
+                  forceType="WITHDRAW" 
+                />
+              ) : (
+                <AdminPanel initialView={activeTab.replace("admin-", "")} />
+              )
+            ) : (
               activeTab === "wallet" ? <Wallet /> :
               activeTab === "withdraw" ? <Withdraw /> :
               activeTab === "history" ? <History /> :
