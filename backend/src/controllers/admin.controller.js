@@ -15,12 +15,6 @@ exports.getPendingRequests = async(req, res) => {
     }
 };
 
-// FIXED: Added method details for withdrawals
-        const withdrawals = await pool.query(
-            `SELECT id, user_id, amount, method_name, address, qr_code, 'WITHDRAW' as type, created_at 
-             FROM withdrawals 
-             WHERE status = 'PENDING'`
-        );
 
 // 2. Approve/Reject Request
 exports.handleRequest = async(req, res) => {
