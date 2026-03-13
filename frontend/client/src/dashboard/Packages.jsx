@@ -293,6 +293,9 @@ export default function Packages() {
           const seatsInBatch = data ? data.seatsInCurrentBatch : 0;
           const percent = Math.min((seatsInBatch / batchSize) * 100, 100);
 
+          const currentMonth = new Date().toLocaleString('en-US', { month: '2-digit' }); // 01, 02...
+const currentYear = new Date().getFullYear().toString().slice(-2); // 24, 25, 26...
+
           return (
             <Card 
               key={pkg} 
@@ -303,9 +306,9 @@ export default function Packages() {
             >
               <CardTop>
                 <IconWrapper $gradient={style.gradient}>{style.icon}</IconWrapper>
-                {data?.currentBatch && <BatchBadge>Slot #{data.currentBatch}</BatchBadge>}
+                {data?.currentBatch && <BatchBadge> {`SLOT${currentMonth}${data.currentBatch}${currentYear}`}</BatchBadge>}
               </CardTop>
-              
+
               <div>
                 <Title>{pkg}</Title>
                 <PriceTag>${data?.ticket_price || "..."}</PriceTag>

@@ -1,4 +1,4 @@
-import React, { useEffect,useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -20,37 +20,21 @@ const Section = styled.div`
 `;
 
 const TopHeaderRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-  gap: 20px;
-  flex-wrap: wrap;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 25px; gap: 20px; flex-wrap: wrap;
 `;
 
 const SearchBox = styled.div`
-  position: relative;
-  flex: 1;
-  max-width: 400px;
+  position: relative; flex: 1; max-width: 400px;
   input {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 10px 15px 10px 40px;
-    color: #fff;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.3s;
-    &:focus { border-color: #3ea6ff; background: rgba(255,255,255,0.08); }
+    width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px; padding: 10px 15px 10px 40px; color: #fff; font-size: 14px; outline: none;
+    transition: all 0.3s; &:focus { border-color: #3ea6ff; background: rgba(255,255,255,0.08); }
   }
   svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666; }
 `;
 
-const SubNav = styled.div`
-  display: flex; gap: 8px;
-  background: rgba(255, 255, 255, 0.03); padding: 6px; border-radius: 12px;
-`;
+const SubNav = styled.div` display: flex; gap: 8px; background: rgba(255, 255, 255, 0.03); padding: 6px; border-radius: 12px; `;
 
 const NavItem = styled.button`
   background: ${props => props.$active ? 'rgba(62, 166, 255, 0.1)' : 'transparent'};
@@ -61,19 +45,11 @@ const NavItem = styled.button`
   &:hover { color: #fff; background: rgba(255,255,255,0.05); }
 `;
 
-const StatsHeader = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-  align-items: center;
-`;
+const StatsHeader = styled.div` display: flex; gap: 12px; margin-bottom: 20px; align-items: center; `;
 
 const StatCard = styled.div`
-  background: rgba(255, 255, 255, 0.03);
-  padding: 10px 15px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  min-width: 140px;
+  background: rgba(255, 255, 255, 0.03); padding: 10px 15px; border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05); min-width: 140px;
   span { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
   h4 { margin: 2px 0 0 0; font-size: 16px; color: #fff; }
 `;
@@ -86,17 +62,39 @@ const Table = styled.table`
   td:last-child { border-radius: 0 12px 12px 0; }
 `;
 
-const Badge = styled.span`
-  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
-  display: flex; align-items: center; gap: 6px; width: fit-content;
-  background: ${props => props.$bg}; color: ${props => props.$color};
-`;
-
 const ActionBtn = styled.button`
   width: 32px; height: 32px; border-radius: 8px; border: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; margin-right: 8px;
   background: ${props => props.$bg}; color: ${props => props.$color};
   transition: transform 0.2s; &:hover { transform: scale(1.1); }
+`;
+
+const ProofContainer = styled.div`
+  max-width: 150px;
+  background: rgba(0,0,0,0.2);
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  img { 
+    width: 40px; height: 40px; 
+    object-fit: cover; border-radius: 4px; 
+    cursor: zoom-in; border: 1px solid rgba(255,255,255,0.1);
+    &:hover { border-color: #3ea6ff; }
+  }
+`;
+
+const ImageModal = styled(motion.div)`
+  position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  img { max-width: 90%; max-height: 85vh; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+`;
+
+const CloseModal = styled.button`
+  position: absolute; top: 30px; right: 30px; background: #fff; border: none;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer; color: #000;
+  display: flex; align-items: center; justify-content: center; font-weight: bold;
 `;
 
 const PaginationWrapper = styled.div`
@@ -105,23 +103,12 @@ const PaginationWrapper = styled.div`
 `;
 
 const PageBtn = styled.button`
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff; width: 32px; height: 32px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.2s;
   &:disabled { opacity: 0.2; cursor: not-allowed; }
   &:hover:not(:disabled) { background: #3ea6ff; }
-`;
-
-const ProofContainer = styled.div`
-  max-width: 200px;
-  font-size: 12px;
-  background: rgba(0,0,0,0.2);
-  padding: 8px;
-  border-radius: 8px;
-  color: #ccc;
-  img { width: 100%; border-radius: 4px; margin-top: 5px; cursor: pointer; border: 1px solid #444; }
-  .details { word-break: break-all; margin-bottom: 5px; }
 `;
 
 // --- COMPONENT ---
@@ -130,33 +117,17 @@ export default function AdminRequests({ requests = [], onHandleAction, forceType
   const [activeSubView, setActiveSubView] = useState("PENDING");
   const [query, setQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(null);
   const itemsPerPage = 30;
 
-  // ✅ forceType logic: DEPOSIT vs WITHDRAW
   const isDeposit = forceType === "DEPOSIT";
 
-
-
-useEffect(() => {
-    if (requests && requests.length > 0) {
-      console.log("--- ADMIN DATA DEBUGGER ---");
-      console.log("Current forceType:", forceType);
-      console.log("First Request Object Keys:", Object.keys(requests[0]));
-      console.log("Full Raw Data:", requests);
-      console.log("---------------------------");
-    }
-  }, [requests, forceType]);
-
-
+  // 🕵️ Filter Logic
   const filteredResults = useMemo(() => {
-    setCurrentPage(1); 
     let result = (requests || []).filter(req => {
       if (!req || !req.status) return false;
-      
-      // 1. Sidebar tab filter (Deposit vs Withdraw)
       if (forceType && req.type !== forceType) return false;
 
-      // 2. Sub-Nav filter (Pending/Approved/Rejected)
       const s = req.status.toString().trim().toUpperCase();
       if (activeSubView === "APPROVED") return s === "APPROVED" || s === "APPROVE";
       if (activeSubView === "REJECTED") return s === "REJECTED" || s === "REJECT";
@@ -166,10 +137,9 @@ useEffect(() => {
     if (query) {
       const lowQ = query.toLowerCase();
       result = result.filter(req => 
-
         req.user_id?.toString().includes(lowQ) ||
         req.user_name?.toLowerCase().includes(lowQ) ||
-        req.transactionId?.toLowerCase().includes(lowQ) || // check for deposit txn id
+        req.transaction_id?.toString().toLowerCase().includes(lowQ) ||
         req.amount?.toString().includes(lowQ)
       );
     }
@@ -180,15 +150,33 @@ useEffect(() => {
   const paginatedData = filteredResults.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalAmount = filteredResults.reduce((acc, curr) => acc + Number(curr.amount), 0);
 
-  const confirmAction = (id, type, action) => {
+  const confirmAction = async (id, type, action) => {
     if (window.confirm(`Are you sure you want to ${action} this?`)) {
-      onHandleAction(id, type, action);
+      await onHandleAction(id, type, action);
+      // DashboardLayout handles fetchAllRequests which updates 'requests' prop
     }
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       
+      {/* 🟢 FULL SCREEN IMAGE MODAL */}
+      <AnimatePresence>
+        {selectedImage && (
+          <ImageModal 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+          >
+            <CloseModal onClick={() => setSelectedImage(null)}><X size={24} /></CloseModal>
+            <motion.img 
+              initial={{ scale: 0.8 }} animate={{ scale: 1 }}
+              src={selectedImage} alt="Zoomed Proof" 
+              onClick={(e) => e.stopPropagation()}
+            />
+          </ImageModal>
+        )}
+      </AnimatePresence>
+
       <TopHeaderRow>
         <SearchBox>
           <Search size={18} />
@@ -223,7 +211,7 @@ useEffect(() => {
       <Section>
         <AnimatePresence mode="wait">
           {paginatedData.length === 0 ? (
-            <motion.p key="empty" style={{color:'#666', textAlign: 'center', padding: '60px'}}>No {forceType.toLowerCase()} requests found.</motion.p>
+            <motion.p key="empty" style={{color:'#666', textAlign: 'center', padding: '60px'}}>No {forceType.toLowerCase()} records found.</motion.p>
           ) : (
             <>
               <Table>
@@ -233,62 +221,57 @@ useEffect(() => {
                     <th>Date & Time</th>
                     <th>Name</th>
                     <th>User ID</th>
-                    {/* 🟢 CONDITIONAL COLUMNS */}
-                    {isDeposit ? (
-                      <th>Transaction ID</th>
-                    ) : (
-                      <th>Bank Details / Proof</th>
-                    )}
+                    {isDeposit ? <th>Transaction ID</th> : <th>Bank Details / Proof</th>}
                     <th>Amount</th>
                     {activeSubView === "PENDING" && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
-{paginatedData.map((req, index) => (
-  <tr key={`${req.type}-${req.id}`}>
-    <td style={{color: '#555'}}>{((currentPage - 1) * itemsPerPage) + index + 1}</td>
-    <td>
-      <div style={{color: '#fff'}}>{new Date(req.date || req.created_at).toLocaleDateString()}</div>
-      <div style={{fontSize: '11px', color: '#666'}}>{new Date(req.date || req.created_at).toLocaleTimeString()}</div>
-    </td>
-    <td style={{fontWeight: '600', color: '#3ea6ff'}}>{req.user_name}</td>
-    <td style={{fontWeight: '600', color: '#ffffff'}}>{req.user_id}</td>
+                  {paginatedData.map((req, index) => (
+                    <tr key={`${req.type}-${req.id}-${req.status}`}> {/* 🟢 Status included in key for instant UI update */}
+                      <td style={{color: '#555'}}>{((currentPage - 1) * itemsPerPage) + index + 1}</td>
+                      <td>
+                        <div style={{color: '#fff'}}>{new Date(req.date || req.created_at).toLocaleDateString()}</div>
+                        <div style={{fontSize: '11px', color: '#666'}}>{new Date(req.date || req.created_at).toLocaleTimeString()}</div>
+                      </td>
+                      <td style={{fontWeight: '600', color: '#3ea6ff'}}>{req.user_name}</td>
+                      <td style={{fontWeight: '600', color: '#ffffff'}}>{req.user_id}</td>
 
-    {/* 🟢 FIXED DYNAMIC DATA COLUMN */}
-    {isDeposit ? (
-      <td>
-        <code style={{color: '#2ecc71', background: 'rgba(46,204,113,0.1)', padding: '4px 8px', borderRadius: '4px'}}>
-          {/* Matches Neon DB column 'transaction_id' */}
-          {req.transaction_id || "N/A"}
-        </code>
-      </td>
-    ) : (
-      <td>
-        <ProofContainer>
-          <div className="details">
-            {/* Matches Neon DB column 'method_name' */}
-            {req.method_name && <strong style={{color: '#fff'}}>{req.method_name}: </strong>}
-            {/* Matches Neon DB column 'address' */}
-            {req.address || "No details provided"}
-          </div>
-          {/* Matches Neon DB column 'qr_code' */}
-          {req.qr_code && (
-            <img src={req.qr_code} alt="Proof" onClick={() => window.open(req.qr_code)} title="Click to expand" />
-          )}
-        </ProofContainer>
-      </td>
-    )}
+                      {isDeposit ? (
+                        <td>
+                          <code style={{color: '#2ecc71', background: 'rgba(46,204,113,0.1)', padding: '4px 8px', borderRadius: '4px'}}>
+                            {req.transaction_id || "N/A"}
+                          </code>
+                        </td>
+                      ) : (
+                        <td>
+                          <ProofContainer>
+                            <div className="details">
+                              {req.method_name && <strong style={{color: '#fff'}}>{req.method_name}: </strong>}
+                              {req.address || "No details provided"}
+                            </div>
+                            {req.qr_code && (
+                              <img 
+                                src={req.qr_code} 
+                                alt="Proof" 
+                                onClick={() => setSelectedImage(req.qr_code)} 
+                                title="Click to expand" 
+                              />
+                            )}
+                          </ProofContainer>
+                        </td>
+                      )}
 
-    <td style={{fontWeight:'700', fontSize:'16px', color: '#fff'}}>${Number(req.amount).toFixed(2)}</td>
-    
-    {activeSubView === "PENDING" && (
-      <td>
-        <ActionBtn $bg="rgba(46,204,113,0.15)" $color="#2ecc71" onClick={() => confirmAction(req.id, req.type, "APPROVE")} title="Approve"><Check size={16}/></ActionBtn>
-        <ActionBtn $bg="rgba(231,76,60,0.15)" $color="#e74c3c" onClick={() => confirmAction(req.id, req.type, "REJECT")} title="Reject"><X size={16}/></ActionBtn>
-      </td>
-    )}
-  </tr>
-))}
+                      <td style={{fontWeight:'700', fontSize:'16px', color: '#fff'}}>${Number(req.amount).toFixed(2)}</td>
+                      
+                      {activeSubView === "PENDING" && (
+                        <td>
+                          <ActionBtn $bg="rgba(46,204,113,0.15)" $color="#2ecc71" onClick={() => confirmAction(req.id, req.type, "APPROVE")} title="Approve"><Check size={16}/></ActionBtn>
+                          <ActionBtn $bg="rgba(231,76,60,0.15)" $color="#e74c3c" onClick={() => confirmAction(req.id, req.type, "REJECT")} title="Reject"><X size={16}/></ActionBtn>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
                 </tbody>
               </Table>
               
@@ -310,8 +293,6 @@ useEffect(() => {
     </motion.div>
   );
 }
-
-
 
 
 
