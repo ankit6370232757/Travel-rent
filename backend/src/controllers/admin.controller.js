@@ -4,7 +4,7 @@ const pool = require("../config/db");
 exports.getPendingRequests = async(req, res) => {
     try {
         const deposits = await pool.query(
-            "SELECT id, user_id, amount,d.transaction_id, 'DEPOSIT' as type, created_at FROM deposits WHERE status = 'PENDING'"
+            "SELECT id, user_id, amount, 'DEPOSIT' as type, created_at FROM deposits WHERE status = 'PENDING'"
         );
         const withdrawals = await pool.query(
             "SELECT id, user_id, amount, 'WITHDRAW' as type, created_at FROM withdrawals WHERE status = 'PENDING'"
@@ -236,7 +236,6 @@ exports.getAllRequests = async(req, res) => {
         const query = `
             SELECT 
                 d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, 
-                d.transaction_id as transaction_id,
                 d.status, d.created_at as date 
             FROM deposits d
             JOIN users u ON d.user_id = u.id
