@@ -248,7 +248,7 @@ exports.getAllRequests = async(req, res) => {
         const query = `
             SELECT 
                 d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, 
-                d.transaction_id as transaction_id, 
+                d.transaction_id, 
                 NULL as method_name, NULL as address, NULL as qr_code,
                 d.status, d.created_at as date 
             FROM deposits d
