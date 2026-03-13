@@ -244,52 +244,51 @@ useEffect(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedData.map((req, index) => (
-                    <tr key={`${req.type}-${req.id}`}>
-                      <td style={{color: '#555'}}>{((currentPage - 1) * itemsPerPage) + index + 1}</td>
-                      <td>
-                        <div style={{color: '#fff'}}>{new Date(req.date || req.created_at).toLocaleDateString()}</div>
-                        <div style={{fontSize: '11px', color: '#666'}}>{new Date(req.date || req.created_at).toLocaleTimeString()}</div>
-                      </td>
-                      <td style={{fontWeight: '600', color: '#3ea6ff'}}>
-                        {req.user_name}
-                      </td>
+{paginatedData.map((req, index) => (
+  <tr key={`${req.type}-${req.id}`}>
+    <td style={{color: '#555'}}>{((currentPage - 1) * itemsPerPage) + index + 1}</td>
+    <td>
+      <div style={{color: '#fff'}}>{new Date(req.date || req.created_at).toLocaleDateString()}</div>
+      <div style={{fontSize: '11px', color: '#666'}}>{new Date(req.date || req.created_at).toLocaleTimeString()}</div>
+    </td>
+    <td style={{fontWeight: '600', color: '#3ea6ff'}}>{req.user_name}</td>
+    <td style={{fontWeight: '600', color: '#ffffff'}}>{req.user_id}</td>
 
-                       <td style={{fontWeight: '600', color: '#ffffff'}}>
-                        {req.user_id}
-                      </td>
+    {/* 🟢 FIXED DYNAMIC DATA COLUMN */}
+    {isDeposit ? (
+      <td>
+        <code style={{color: '#2ecc71', background: 'rgba(46,204,113,0.1)', padding: '4px 8px', borderRadius: '4px'}}>
+          {/* Matches Neon DB column 'transaction_id' */}
+          {req.transaction_id || "N/A"}
+        </code>
+      </td>
+    ) : (
+      <td>
+        <ProofContainer>
+          <div className="details">
+            {/* Matches Neon DB column 'method_name' */}
+            {req.method_name && <strong style={{color: '#fff'}}>{req.method_name}: </strong>}
+            {/* Matches Neon DB column 'address' */}
+            {req.address || "No details provided"}
+          </div>
+          {/* Matches Neon DB column 'qr_code' */}
+          {req.qr_code && (
+            <img src={req.qr_code} alt="Proof" onClick={() => window.open(req.qr_code)} title="Click to expand" />
+          )}
+        </ProofContainer>
+      </td>
+    )}
 
-                      {/* 🟢 DYNAMIC DATA COLUMN */}
-                      {isDeposit ? (
-                        <td>
-                           <code style={{color: '#2ecc71', background: 'rgba(46,204,113,0.1)', padding: '4px 8px', borderRadius: '4px'}}>
-                              {req.transaction_id || "N/A"}
-                           </code>
-                        </td>
-                      ) : (
-                        <td>
-                           <ProofContainer>
-                              <div className="details">
-                                 {req.methodName && <strong style={{color: '#fff'}}>{req.methodName}: </strong>}
-                                 {req.address || req.details || "No details provided"}
-                              </div>
-                              {req.qrCode && (
-                                 <img src={req.qrCode} alt="Proof" onClick={() => window.open(req.qrCode)} title="Click to expand" />
-                              )}
-                           </ProofContainer>
-                        </td>
-                      )}
-
-                      <td style={{fontWeight:'700', fontSize:'16px', color: '#fff'}}>${Number(req.amount).toFixed(2)}</td>
-                      
-                      {activeSubView === "PENDING" && (
-                        <td>
-                          <ActionBtn $bg="rgba(46,204,113,0.15)" $color="#2ecc71" onClick={() => confirmAction(req.id, req.type, "APPROVE")} title="Approve"><Check size={16}/></ActionBtn>
-                          <ActionBtn $bg="rgba(231,76,60,0.15)" $color="#e74c3c" onClick={() => confirmAction(req.id, req.type, "REJECT")} title="Reject"><X size={16}/></ActionBtn>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
+    <td style={{fontWeight:'700', fontSize:'16px', color: '#fff'}}>${Number(req.amount).toFixed(2)}</td>
+    
+    {activeSubView === "PENDING" && (
+      <td>
+        <ActionBtn $bg="rgba(46,204,113,0.15)" $color="#2ecc71" onClick={() => confirmAction(req.id, req.type, "APPROVE")} title="Approve"><Check size={16}/></ActionBtn>
+        <ActionBtn $bg="rgba(231,76,60,0.15)" $color="#e74c3c" onClick={() => confirmAction(req.id, req.type, "REJECT")} title="Reject"><X size={16}/></ActionBtn>
+      </td>
+    )}
+  </tr>
+))}
                 </tbody>
               </Table>
               
