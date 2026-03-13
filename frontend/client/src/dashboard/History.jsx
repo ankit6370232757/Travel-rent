@@ -148,7 +148,7 @@ const Thead = styled.thead`
 
 const Th = styled.th`
   text-align: left;
-  padding: 18px 24px;
+  padding: 10px 24px;
   color: #888;
   font-size: 12px;
   font-weight: 700;
@@ -164,14 +164,14 @@ const Tr = styled(motion.tr)`
 `;
 
 const Td = styled.td`
-  padding: 20px 24px;
-  font-size: 14px;
+  padding: 10px 24px;
+  font-size: 10px;
   color: #e0e0e0;
   vertical-align: middle;
 `;
 
 const IconBox = styled.div`
-  width: 38px; height: 38px;
+  width: 34px; height: 34px;
   border-radius: 10px;
   background: ${props => props.bg};
   color: ${props => props.color};
@@ -398,7 +398,7 @@ export default function History() {
             <Table>
               <Thead>
                 <tr>
-                  <Th style={{width: '60px'}}>#</Th>
+                  <Th style={{width: '60px'}}>SL</Th>
                   <Th>Type & ID</Th>
                   <Th>Date & Time</Th>
                   <Th>Status</Th>
@@ -413,7 +413,7 @@ export default function History() {
                   const globalIndex = (currentPage - 1) * itemsPerPage + i + 1;
                   return (
                     <Tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
-                      <Td style={{color: '#555', fontWeight:'700'}}>{globalIndex}</Td>
+                      <Td style={{color: '#ffffff', fontWeight:'700'}}>{globalIndex}</Td>
                       <Td>
                         <TypeInfo>
                           <IconBox bg={style.bg} color={style.color}>{style.icon}</IconBox>
@@ -442,7 +442,7 @@ export default function History() {
                   );
                 }) : (
                   <tr>
-                    <Td colSpan="6" style={{textAlign: 'center', padding: '60px', color: '#666'}}>
+                    <Td colSpan="6" style={{textAlign: 'center', padding: '60px', color: '#bcbcbc'}}>
                       <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:10}}>
                          <AlertCircle size={30} color="#444"/>
                          <span>No records found matching your criteria.</span>

@@ -201,7 +201,7 @@ export default function Wallet() {
         
         <BalanceWrapper>
           <Balance>
-            <span>₹</span>
+            <span>$</span>
             <CountUp start={0} end={Number(wallet.balance)} duration={2.5} separator="," decimals={2} />
           </Balance>
           

@@ -36,7 +36,8 @@ const float = keyframes`
 
 // --- STYLED COMPONENTS ---
 const LayoutWrapper = styled.div`
-  min-height: 100vh; width: 100vw; background-color: #050507; color: #fff;
+  min-height: 100vh; width: 100vw;background-color: ${props => props.theme.bg}; /* 👈 Use Theme */
+  color: ${props => props.theme.text}; background-color: #050507; color: #fff;
   display: flex; position: relative; overflow-x: hidden; font-family: 'Inter', sans-serif;
 `;
 
@@ -146,7 +147,7 @@ const Overview = ({ user }) => {
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
       <div style={{ marginBottom: '20px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>
-          Welcome back, <span style={{ color: '#3ea6ff' }}>{user.name.split(' ')[0]}</span> 👋
+          Welcome back, <span style={{ color: '#3ea6ff' }}>{user.name.split(' ')[0]}</span>
         </h1>
         <p style={{ color: '#555', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
            <ShieldCheck size={14} color="#2ecc71" /> Portfolio Status: <span style={{color: '#2ecc71', fontWeight: 700}}>Live</span>
