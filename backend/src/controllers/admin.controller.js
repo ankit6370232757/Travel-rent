@@ -244,7 +244,7 @@ exports.deletePackage = async(req, res) => {
     }
 };
 exports.getAllRequests = async(req, res) => {
-   try {
+    try {
         const query = `
             SELECT 
                 d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, 
