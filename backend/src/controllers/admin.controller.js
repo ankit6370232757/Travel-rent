@@ -3,11 +3,23 @@ const pool = require("../config/db");
 // 1. Get Pending Requests
 exports.getPendingRequests = async(req, res) => {
     try {
+        // Deposits logic
         const deposits = await pool.query(
-            "SELECT id, user_id, amount, 'DEPOSIT' as type, created_at FROM deposits WHERE status = 'PENDING'"
+            `SELECT d.id, d.user_id, u.name as user_name, d.amount, d.transaction_id, 'DEPOSIT' as type, d.created_at 
+             FROM deposits d 
+             JOIN users u ON d.user_id = u.id 
+             WHERE d.status = 'PENDING'`
         );
+
+        // Withdrawals logic - Joining with withdrawal_accounts to get details
         const withdrawals = await pool.query(
-            "SELECT id, user_id, amount, 'WITHDRAW' as type, created_at FROM withdrawals WHERE status = 'PENDING'"
+            `SELECT w.id, w.user_id, u.name as user_name, w.net_amount as amount, 
+             wa.method_name, wa.address, wa.qr_code, 
+             'WITHDRAW' as type, w.id as withdrawal_id 
+             FROM withdrawals w
+             JOIN users u ON w.user_id = u.id
+             LEFT JOIN withdrawal_accounts wa ON w.user_id = wa.user_id
+             WHERE w.status = 'PENDING'`
         );
         res.json([...deposits.rows, ...withdrawals.rows]);
     } catch (err) {
@@ -232,25 +244,31 @@ exports.deletePackage = async(req, res) => {
     }
 };
 exports.getAllRequests = async(req, res) => {
-    try {
+   try {
         const query = `
             SELECT 
                 d.id, d.user_id, u.name as user_name, d.amount, 'DEPOSIT' as type, 
+                d.transaction_id as transaction_id, 
+                NULL as method_name, NULL as address, NULL as qr_code,
                 d.status, d.created_at as date 
             FROM deposits d
             JOIN users u ON d.user_id = u.id
             UNION ALL
             SELECT 
-                w.id, w.user_id, u.name as user_name, w.amount, 'WITHDRAW' as type, 
-                w.status, w.created_at as date 
+                w.id, w.user_id, u.name as user_name, w.net_amount as amount, 'WITHDRAW' as type, 
+                NULL as transaction_id,
+                wa.method_name, wa.address, wa.qr_code,
+                w.status, NOW() as date 
             FROM withdrawals w
             JOIN users u ON w.user_id = u.id
+            LEFT JOIN withdrawal_accounts wa ON w.user_id = wa.user_id
             ORDER BY date DESC
         `;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
-        res.status(500).json({ message: "Server Error" });
+        console.error("All Requests Error:", err.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 };
 
