@@ -57,7 +57,7 @@ const StatCard = styled.div`
 const Table = styled.table`
   width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 1000px;
   th { text-align: left; padding: 10px; color: #888; font-size: 12px; text-transform: uppercase; }
-  td { padding: 12px 10px; color: #ddd; font-size: 14px; background: rgba(255,255,255,0.02); vertical-align: middle; }
+  td { padding: 12px 10px; color: #ddd; font-size: 14px; background: rgba(128, 41, 41, 0.02); vertical-align: middle; }
   td:first-child { border-radius: 12px 0 0 12px; text-align: center; width: 50px; }
   td:last-child { border-radius: 0 12px 12px 0; }
 `;
@@ -71,7 +71,7 @@ const ActionBtn = styled.button`
 
 const ProofContainer = styled.div`
   max-width: 150px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0);
   padding: 6px;
   border-radius: 8px;
   display: flex;
@@ -221,7 +221,14 @@ export default function AdminRequests({ requests = [], onHandleAction, forceType
                     <th>Date & Time</th>
                     <th>Name</th>
                     <th>User ID</th>
-                    {isDeposit ? <th>Transaction ID</th> : <th>Bank Details / Proof</th>}
+                    {isDeposit ? (
+      <th>Transaction ID</th>
+    ) : (
+      <>
+        <th>Method</th>
+        <th>QR code</th> {/* This is your "another column" */}
+      </>
+    )}
                     <th>Amount</th>
                     {activeSubView === "PENDING" && <th>Actions</th>}
                   </tr>
@@ -244,22 +251,31 @@ export default function AdminRequests({ requests = [], onHandleAction, forceType
                           </code>
                         </td>
                       ) : (
+                         <>
                         <td>
                           <ProofContainer>
                             <div className="details">
                               {req.method_name && <strong style={{color: '#fff'}}>{req.method_name}: </strong>}
                               {req.address || "No details provided"}
                             </div>
-                            {req.qr_code && (
+                          </ProofContainer>
+                        </td>
+
+                         <td>
+                          <ProofContainer>
+                            <div className="details">
+                            </div>
+                            {req.qr_code ? (
                               <img 
                                 src={req.qr_code} 
                                 alt="Proof" 
                                 onClick={() => setSelectedImage(req.qr_code)} 
                                 title="Click to expand" 
                               />
-                            )}
+                            ):(<span>-</span>)}
                           </ProofContainer>
                         </td>
+                        </>
                       )}
 
                       <td style={{fontWeight:'700', fontSize:'16px', color: '#fff'}}>${Number(req.amount).toFixed(2)}</td>

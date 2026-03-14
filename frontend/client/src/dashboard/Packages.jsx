@@ -374,25 +374,35 @@ export default function Packages() {
         {PACKAGES.map(pkg => {
           const data = status[pkg];
           const style = PACKAGE_STYLES[pkg] || PACKAGE_STYLES.WATER; 
+
+          // --- FORMATTING LOGIC: CODE-DDMMYY-BATCH ---
+          let slotDisplay = "...";
+          if (data && data.createdAt) {
+            const dbDate = new Date(data.createdAt);
+            const day = dbDate.getDate().toString().padStart(2, '0');
+            const month = (dbDate.getMonth() + 1).toString().padStart(2, '0');
+            const year = dbDate.getFullYear().toString().slice(-2);
+            const pkgCode = data.code || "PKG";
+            const batchId = data.currentBatch || "1";
+            
+            slotDisplay = `${pkgCode}${day}${month}${year}${batchId}`;
+          }
           
           const batchSize = data ? data.batchSize : 180;
           const seatsInBatch = data ? data.seatsInCurrentBatch : 0;
           const percent = Math.min((seatsInBatch / batchSize) * 100, 100);
 
-          const currentMonth = new Date().toLocaleString('en-US', { month: '2-digit' });
-          const currentYear = new Date().getFullYear().toString().slice(-2);
-
           return (
-            <Card 
-              key={pkg} 
+            <Card
+              key={pkg}
               layoutId={`card-${pkg}`} 
               $shadow={style.shadow}
-              onClick={() => data && setSelectedPkg({ ...data, style, percent })}
+              onClick={() => data && setSelectedPkg({ ...data, style, percent, slotDisplay })}
               whileHover={{ scale: 1.02 }}
             >
               <CardTop>
                 <IconWrapper $gradient={style.gradient}>{style.icon}</IconWrapper>
-                {data?.currentBatch && <BatchBadge> {`SLOT${currentMonth}${data.currentBatch}${currentYear}`}</BatchBadge>}
+                {data && <BatchBadge>{slotDisplay}</BatchBadge>}
               </CardTop>
 
               <div>
@@ -449,7 +459,7 @@ export default function Packages() {
                    <InfoBox>
                      <h4><Zap size={14}/> LIVE ONBOARDING BONUS</h4>
                      <div className="grid">
-                       <div><small>Your Batch</small><b>#{info.batch}</b></div>
+                       <div><small>Slot ID</small><b>{selectedPkg.slotDisplay}</b></div>
                        <div><small>Seat No</small><b>#{info.seat}</b></div>
                        <div><small style={{color:'#2ecc71'}}>Bonus</small><b style={{color:'#2ecc71'}}>${info.bonus}</b></div>
                      </div>
