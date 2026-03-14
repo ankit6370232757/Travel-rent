@@ -205,7 +205,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
   const [copied, setCopied] = useState(""); 
-
+  const [tickets, setTickets] = useState([]);
   useEffect(() => {
     // 1. Load from LocalStorage
     const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -234,6 +234,8 @@ export default function Settings() {
       })
       .catch(err => console.error("Failed to fetch profile:", err));
 
+      // --- Add this useEffect to fetch tickets ---
+      api.get("/support/my-tickets").then(res => setTickets(res.data));
   }, []);
 
   const handleUpdate = async () => {
@@ -395,6 +397,32 @@ export default function Settings() {
             {supportLoading ? "Sending..." : "Send Message"}
             {!supportLoading && <Send size={16} />}
         </Button>
+
+    <div style={{ marginTop: '40px' }}>
+    <SectionTitle><Mail size={16}/> My Support Tickets</SectionTitle>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {tickets.length === 0 ? (
+            <p style={{color: '#666', textAlign: 'center'}}>No tickets found.</p>
+        ) : (
+            tickets.map(ticket => (
+                <div key={ticket.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <strong style={{ color: '#3ea6ff' }}>{ticket.subject}</strong>
+                        <span style={{ fontSize: '12px', color: ticket.status === 'OPEN' ? '#f1c40f' : '#2ecc71' }}>{ticket.status}</span>
+                    </div>
+                    <p style={{ color: '#ccc', fontSize: '14px', margin: '5px 0' }}>Q: {ticket.message}</p>
+                    
+                    {ticket.admin_reply && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(62,166,255,0.1)', borderRadius: '10px', borderLeft: '3px solid #3ea6ff' }}>
+                            <p style={{ color: '#fff', fontSize: '13px', margin: 0 }}><strong>Admin Reply:</strong> {ticket.admin_reply}</p>
+                        </div>
+                    )}
+                </div>
+            ))
+        )}
+    </div>
+</div>
+
       </SupportBox>
 
     </Card>
