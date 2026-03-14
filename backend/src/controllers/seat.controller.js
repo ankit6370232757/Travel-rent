@@ -6,7 +6,7 @@ exports.getSeatStatus = async(req, res) => {
 
         // 1. Get Full Package Details
         const pkgRes = await pool.query(
-            "SELECT id, name, ticket_price, daily_income, monthly_income, yearly_income, ots_income, total_seats FROM packages WHERE name = $1", [packageName.toUpperCase()]
+            "SELECT id, name, ticket_price, daily_income, monthly_income, yearly_income, ots_income, total_seats, code, created_at FROM packages WHERE name = $1", [packageName.toUpperCase()]
         );
 
         if (pkgRes.rows.length === 0) {
@@ -39,7 +39,8 @@ exports.getSeatStatus = async(req, res) => {
             monthly_income: pkg.monthly_income,
             yearly_income: pkg.yearly_income,
             ots_income: pkg.ots_income,
-
+            code: pkg.code,
+            createdAt: pkg.created_at,
             // Batch & Seat Info
             batchSize: BATCH_SIZE,
             currentBatch: currentBatch,
