@@ -18,17 +18,34 @@ exports.getWallet = async(userId) => {
  * Request a Deposit (User uploads proof, Admin approves later)
  * ✅ NEW FUNCTION
  */
-exports.requestDeposit = async(userId, amount) => {
+exports.requestDeposit = async(userId, amount, transactionId) => {
+    // 1. Validation
     if (!amount || amount <= 0) {
         throw new Error("Invalid amount");
     }
-    // Insert into deposits table (Status: PENDING)
-    await pool.query(
-        `INSERT INTO deposits (user_id, amount, status)
-         VALUES ($1, $2, 'PENDING')`, [userId, amount]
+    if (!transactionId || transactionId.trim().length < 6) {
+        throw new Error("A valid Transaction ID (UTR) is required.");
+    }
+
+    // 2. Check for duplicate Transaction ID to prevent fraud
+    const duplicateCheck = await pool.query(
+        "SELECT id FROM deposits WHERE transaction_id = $1", [transactionId]
     );
 
-    return { message: "Deposit request submitted. Waiting for admin approval." };
+    if (duplicateCheck.rows.length > 0) {
+        throw new Error("This Transaction ID has already been submitted.");
+    }
+
+    // 3. Insert into deposits table including transaction_id
+    await pool.query(
+        `INSERT INTO deposits (user_id, amount, transaction_id, status, created_at)
+         VALUES ($1, $2, $3, 'PENDING', NOW())`, [userId, amount, transactionId]
+    );
+
+    return {
+        success: true,
+        message: "Deposit request submitted with UTR. Waiting for admin approval."
+    };
 };
 
 /**
