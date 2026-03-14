@@ -196,7 +196,7 @@ exports.getPackages = async(req, res) => {
 // 2. Add New Package (Matches your DB columns)
 exports.addPackage = async(req, res) => {
     try {
-        const { name, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income } = req.body;
+        const { name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date } = req.body;
 
         // Simple validation
         if (!name || !ticket_price) {
@@ -205,11 +205,11 @@ exports.addPackage = async(req, res) => {
 
         const query = `
       INSERT INTO packages 
-      (name, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, is_active) 
+      (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, effective_date, is_active) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), TRUE) 
       RETURNING *`;
 
-        const values = [name, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income];
+        const values = [name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date || new Date()];
 
         const newPkg = await pool.query(query, values);
         res.json(newPkg.rows[0]);
@@ -540,5 +540,68 @@ exports.getPendingCount = async(req, res) => {
     } catch (error) {
         console.error("Error fetching pending count:", error);
         res.status(500).json({ message: "Internal server error" });
+    }
+};
+// Update Package Details (Inline Editing)
+exports.updatePackage = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            name,
+            code,
+            ticket_price,
+            total_seats,
+            daily_income,
+            monthly_income,
+            yearly_income,
+            ots_income
+        } = req.body;
+
+        const query = `
+            UPDATE packages 
+            SET name = $1, 
+                code = $2, 
+                ticket_price = $3, 
+                total_seats = $4, 
+                daily_income = $5, 
+                monthly_income = $6, 
+                yearly_income = $7, 
+                ots_income = $8,
+                updated_at = NOW()
+            WHERE id = $9
+            RETURNING *;
+        `;
+
+        const values = [
+            name,
+            code,
+            ticket_price,
+            total_seats,
+            daily_income,
+            monthly_income,
+            yearly_income,
+            ots_income,
+            id
+        ];
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Package not found" });
+        }
+
+        res.json({
+            success: true,
+            message: "Package updated successfully",
+            data: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error("Update Package Error:", err);
+        // Handle unique constraint violation for the 'code' column
+        if (err.code === '23505') {
+            return res.status(400).json({ message: "Package code already exists. Please use a unique code." });
+        }
+        res.status(500).json({ message: "Internal server error during update" });
     }
 };

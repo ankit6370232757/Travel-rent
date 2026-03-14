@@ -12,30 +12,44 @@ exports.getWallet = async(req, res) => {
 // ✅ NEW: Deposit Request
 exports.requestDeposit = async(req, res) => {
     try {
+        // 🟢 FIX: Accept both naming conventions from frontend
         const { amount } = req.body;
-        const result = await walletService.requestDeposit(req.user.id, amount);
-        // const userId = req.user.id;
-        // const { amount, utrNumber } = req.body;
+        const transaction_id = req.body.transaction_id || req.body.transactionId;
 
-        // if (!utrNumber || utrNumber.trim().length < 8) {
-        //     return res.status(400).json({ message: "A valid UTR/Transaction ID is required." });
-        // }
+        const userId = req.user.id;
 
-        // // Check for duplicate UTR to prevent fraud
-        // const duplicateCheck = await pool.query(
-        //     "SELECT id FROM deposits WHERE utr_number = $1", [utrNumber]
-        // );
-        // if (duplicateCheck.rows.length > 0) {
-        //     return res.status(400).json({ message: "This UTR has already been submitted." });
-        // }
+        // 1. Validation
+        if (!amount || parseFloat(amount) <= 0) {
+            return res.status(400).json({ message: "Invalid deposit amount" });
+        }
 
-        // const result = await walletService.requestDeposit(userId, amount, utrNumber);
-        res.json(result);
+        // Check if transaction_id exists after checking both naming styles
+        if (!transaction_id || transaction_id.toString().trim().length < 6) {
+            return res.status(400).json({ message: "A valid Transaction ID (UTR) is required." });
+        }
+
+        // 2. Prevent Duplicate Transaction IDs
+        const duplicateCheck = await pool.query(
+            "SELECT id FROM deposits WHERE transaction_id = $1", [transaction_id.toString().trim()]
+        );
+
+        if (duplicateCheck.rows.length > 0) {
+            return res.status(400).json({ message: "This Transaction ID has already been submitted." });
+        }
+
+        // 3. Call service to save
+        const result = await walletService.requestDeposit(userId, amount, transaction_id);
+
+        res.json({
+            success: true,
+            message: "Deposit request submitted! Waiting for admin verification.",
+            data: result
+        });
     } catch (err) {
+        console.error("Deposit Request Error:", err.message);
         res.status(400).json({ message: err.message });
     }
 };
-
 exports.withdraw = async(req, res) => {
     try {
         const { amount, methodName, address } = req.body;
