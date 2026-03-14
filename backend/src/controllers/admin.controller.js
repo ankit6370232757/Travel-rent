@@ -196,7 +196,7 @@ exports.getPackages = async(req, res) => {
 // 2. Add New Package (Matches your DB columns)
 exports.addPackage = async(req, res) => {
     try {
-        const { name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income } = req.body;
+        const { name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date } = req.body;
 
         // Simple validation
         if (!name || !ticket_price) {
@@ -205,11 +205,11 @@ exports.addPackage = async(req, res) => {
 
         const query = `
       INSERT INTO packages 
-      (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, is_active) 
+      (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, effective_date, is_active) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), TRUE) 
       RETURNING *`;
 
-        const values = [name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income];
+        const values = [name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date || new Date()];
 
         const newPkg = await pool.query(query, values);
         res.json(newPkg.rows[0]);
