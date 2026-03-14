@@ -12,7 +12,10 @@ exports.getWallet = async(req, res) => {
 // ✅ NEW: Deposit Request
 exports.requestDeposit = async(req, res) => {
     try {
-        const { amount, transaction_id } = req.body; // 👈 Now receiving transaction_id
+        // 🟢 FIX: Accept both naming conventions from frontend
+        const { amount } = req.body;
+        const transaction_id = req.body.transaction_id || req.body.transactionId;
+
         const userId = req.user.id;
 
         // 1. Validation
@@ -20,20 +23,21 @@ exports.requestDeposit = async(req, res) => {
             return res.status(400).json({ message: "Invalid deposit amount" });
         }
 
-        if (!transaction_id || transaction_id.trim().length < 6) {
+        // Check if transaction_id exists after checking both naming styles
+        if (!transaction_id || transaction_id.toString().trim().length < 6) {
             return res.status(400).json({ message: "A valid Transaction ID (UTR) is required." });
         }
 
-        // 2. Prevent Duplicate Transaction IDs (Security Check)
+        // 2. Prevent Duplicate Transaction IDs
         const duplicateCheck = await pool.query(
-            "SELECT id FROM deposits WHERE transaction_id = $1", [transaction_id]
+            "SELECT id FROM deposits WHERE transaction_id = $1", [transaction_id.toString().trim()]
         );
 
         if (duplicateCheck.rows.length > 0) {
             return res.status(400).json({ message: "This Transaction ID has already been submitted." });
         }
 
-        // 3. Call service to save (Ensure your walletService.requestDeposit accepts the extra argument)
+        // 3. Call service to save
         const result = await walletService.requestDeposit(userId, amount, transaction_id);
 
         res.json({
