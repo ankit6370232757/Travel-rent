@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth.middleware");
 const adminController = require("../controllers/admin.controller");
+const supportController = require("../controllers/support.controller"); // 👈 Ye line check karo
 
 router.get("/requests", authMiddleware, adminController.getAllRequests);
 router.post("/handle", authMiddleware, adminController.handleRequest);
@@ -29,4 +30,7 @@ router.post("/settings", authMiddleware, adminController.updateSettings);
 router.get("/pending-count", authMiddleware, adminController.getPendingCount);
 
 router.get("/finance/all-logs", authMiddleware, adminController.getAllFinanceLogs);
+
+router.get("/tickets", authMiddleware, supportController.getAllTickets);
+router.post("/reply-ticket", authMiddleware, supportController.replyTicket);
 module.exports = router;
