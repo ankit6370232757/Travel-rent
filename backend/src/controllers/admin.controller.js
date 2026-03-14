@@ -542,3 +542,66 @@ exports.getPendingCount = async(req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+// Update Package Details (Inline Editing)
+exports.updatePackage = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            name,
+            code,
+            ticket_price,
+            total_seats,
+            daily_income,
+            monthly_income,
+            yearly_income,
+            ots_income
+        } = req.body;
+
+        const query = `
+            UPDATE packages 
+            SET name = $1, 
+                code = $2, 
+                ticket_price = $3, 
+                total_seats = $4, 
+                daily_income = $5, 
+                monthly_income = $6, 
+                yearly_income = $7, 
+                ots_income = $8,
+                updated_at = NOW()
+            WHERE id = $9
+            RETURNING *;
+        `;
+
+        const values = [
+            name,
+            code,
+            ticket_price,
+            total_seats,
+            daily_income,
+            monthly_income,
+            yearly_income,
+            ots_income,
+            id
+        ];
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Package not found" });
+        }
+
+        res.json({
+            success: true,
+            message: "Package updated successfully",
+            data: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error("Update Package Error:", err);
+        // Handle unique constraint violation for the 'code' column
+        if (err.code === '23505') {
+            return res.status(400).json({ message: "Package code already exists. Please use a unique code." });
+        }
+        res.status(500).json({ message: "Internal server error during update" });
+    }
+};
