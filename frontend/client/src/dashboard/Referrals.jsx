@@ -105,7 +105,7 @@ export default function Referrals() {
   return (
     <div style={{ paddingBottom: '50px' }}>
       {/* 🟢 TOP INFO SECTION: Level & Width Rules */}
-      <InfoGrid>
+      {/* <InfoGrid>
         <InfoBox>
           <h4><Layers size={18}/> Depth Income (D1 - D6)</h4>
           <div className="row"><span>Level 1 (Direct)</span><b>10% Commission</b></div>
@@ -120,7 +120,7 @@ export default function Referrals() {
           <div className="row"><span>Node W3 (3 Directs)</span><b>$12.00 Fixed</b></div>
           <p style={{fontSize:'11px', color:'#555', marginTop:'10px'}}>*Unlock fixed bonuses as your direct team grows.</p>
         </InfoBox>
-      </InfoGrid>
+      </InfoGrid> */}
 
       <Card initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
@@ -152,12 +152,14 @@ export default function Referrals() {
           <StyledTable>
             <thead>
               <tr>
+                <th>SL</th>
                 <th>Member</th>
-                <th>Rank</th>
-                <th>Width Progress</th>
+                 <th>User ID</th>
+                <th>Level</th>
+                {/* <th>Width </th> */}
                 <th>Total Commission</th>
-                <th>Joined On</th>
-                <th>User ID</th>
+                <th>DOJ</th>
+               
               </tr>
             </thead>
             <tbody>
@@ -165,20 +167,40 @@ export default function Referrals() {
                 <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Syncing Network...</td></tr>
               ) : currentData.map((u, i) => (
                 <tr key={u.id}>
+                  <td>{i+1}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '35px', height: '35px', borderRadius: '10px', background: 'linear-gradient(135deg, #3ea6ff, #2d55ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff' }}>{u.name?.charAt(0)}</div>
-                      <div><div style={{ fontWeight: 'bold', color: '#fff' }}>{u.name}</div><div style={{ fontSize: '11px', color: '#555' }}>{u.email}</div></div>
+                      {/* <div style={{ width: '35px', height: '35px', borderRadius: '10px', background: 'linear-gradient(135deg, #3ea6ff, #2d55ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff' }}>{u.name?.charAt(0)}</div> */}
+                      <div><div style={{ fontWeight: 'bold', color: '#fff' }}>{u.name}</div></div>
                     </div>
                   </td>
-                  <td><Badge bg={u.level === 1 ? 'rgba(46, 204, 113, 0.1)' : 'rgba(241, 196, 15, 0.1)'} color={u.level === 1 ? '#2ecc71' : '#f1c40f'} border="transparent">Level {u.level}</Badge></td>
-                  <td>
-                    <div style={{fontSize:'12px', marginBottom:'4px'}}>{u.referral_count} / 10 Nodes</div>
-                    <div style={{width:'80px', height:'4px', background:'rgba(255,255,255,0.05)', borderRadius:'10px'}}><div style={{width:`${(u.referral_count/10)*100}%`, height:'100%', background:'#3ea6ff', borderRadius:'10px'}}/></div>
-                  </td>
+                  <td><code style={{ color: '#3ea6ff', fontSize:'16px' }}>{u.id}</code></td>
+
+                  <td  bg={u.level === 1 ? 'rgba(46, 204, 113, 0.1)' : 'rgba(46, 204, 113, 0.1)'} color={u.level === 1 ? '#2ecc71' : '#2ecc71'} border="transparent"> {u.level}</td>
+                  {/* <td>
+    {u.level === 1 ? (
+      <>
+        <div style={{ fontSize: '12px', marginBottom: '4px' }}>
+          {u.referral_count} / 9 Nodes
+        </div>
+        <div style={{ width: '80px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+          <div
+            style={{
+              width: `${Math.min((u.referral_count / 9) * 100, 100)}%`, // Note: Fixed to / 9 based on your label
+              height: '100%',
+              background: '#3ea6ff',
+              borderRadius: '10px',
+            }}
+          />
+        </div>
+      </>
+    ) : (
+      <span style={{ color: '#444' }}>-</span> // Displays a dash for other levels
+    )}
+  </td> */}
+
                   <td><div style={{ color: '#2ecc71', fontWeight: '800' }}><DollarSign size={14} style={{marginBottom:-2}}/> {Number(u.total_bonus || 0).toFixed(2)}</div></td>
                   <td style={{ fontSize: '12px', color: '#666' }}>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td><code style={{ color: '#3ea6ff', fontSize:'12px' }}>{u.id}</code></td>
                 </tr>
               ))}
             </tbody>

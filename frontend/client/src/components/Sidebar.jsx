@@ -134,6 +134,10 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                 <MenuItem $isAdmin $active={activeTab === "admin-withdraw-settings"} onClick={() => handleNav("admin-withdraw-settings")}>
                   <Banknote size={18} /> Withdraw Options
                 </MenuItem>
+
+                <MenuItem $isAdmin $active={activeTab === "admin-queries"} onClick={() => handleNav("admin-queries")}>
+  <Users size={18} /> User Queries
+</MenuItem>
               </>
             ) : (
               <>

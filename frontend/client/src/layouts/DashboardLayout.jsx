@@ -23,6 +23,7 @@ import Settings from "../dashboard/Settings";
 import AdminPanel from "../dashboard/AdminPanel";
 import EarningHistory from "../dashboard/EarningHistory";
 import AdminRequests from "../dashboard/admin/AdminRequests"; // 👈 Yeh line add karo
+import AdminSupport from "../dashboard/admin/AdminSupport";
 
 // --- ANIMATIONS ---
 const marquee = keyframes`
@@ -235,7 +236,7 @@ export default function DashboardLayout() {
       
       fetchAllRequests(); // 👈 Initial admin data fetch
     }
-  }, [user, activeTab]);
+  }, [user.role, activeTab]);
 
   const handleCloseModal = () => { 
     setShowModal(false); 
@@ -349,9 +350,8 @@ export default function DashboardLayout() {
                   onHandleAction={handleAdminAction} 
                   forceType="WITHDRAW" 
                 />
-              ) : (
-                <AdminPanel initialView={activeTab.replace("admin-", "")} />
-              )
+              ) : activeTab === "admin-queries" ? ( <AdminSupport /> ) : 
+              ( <AdminPanel initialView={activeTab.replace("admin-", "")} /> )
             ) : (
               activeTab === "wallet" ? <Wallet /> :
               activeTab === "withdraw" ? <Withdraw /> :
