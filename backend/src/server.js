@@ -35,6 +35,10 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async() => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 
+// 🟢 In do lines ko register karein
+app.use("/api/support", require("./routes/support.routes"));
+app.use("/api/admin", require("./routes/admin.routes"));
+
     try {
         console.log("⚠️ EMERGENCY CATCH-UP: Checking for missed income logs...");
 
