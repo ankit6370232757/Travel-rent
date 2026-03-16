@@ -574,7 +574,7 @@ exports.updatePackage = async (req, res) => {
                 monthly_income = $6, 
                 yearly_income = $7, 
                 ots_income = $8, 
-                description = $9, 
+                description = $9
             WHERE id = $10 
             RETURNING *;`;
 
