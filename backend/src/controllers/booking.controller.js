@@ -56,13 +56,25 @@ exports.bookSeat = async(req, res) => {
         );
         // Updated to include income values from the package
         // 7. Create Seat Record & CAPTURE THE ID 🚀
+        // 7. Create Seat Record & CAPTURE THE ID 🚀
         const seatInsertRes = await client.query(
             `INSERT INTO seats (
-        user_id, package_id, seat_number, batch_number, status, 
-        booked_at, ots_income, income_type, 
-        daily_income, monthly_income, yearly_income, 
-        last_payout, days_remaining
-    ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, $7, $8, $9, NOW(), 365) 
+        user_id,          -- $1
+        package_id,       -- $2
+        seat_number,      -- $3
+        batch_number,     -- $4
+        status,           
+        booked_at,        
+        ots_income,       -- $5
+        income_type,      -- $6
+        daily_income,     -- $7
+        monthly_income,   -- $8
+        yearly_income,    -- $9
+        last_payout,      
+        days_remaining    
+    ) VALUES (
+        $1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, $7, $8, $9, NOW(), 365
+    ) 
     RETURNING id`, [
                 userId, // $1
                 pkg.id, // $2
