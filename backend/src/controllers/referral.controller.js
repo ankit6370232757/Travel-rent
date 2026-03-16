@@ -73,20 +73,16 @@ exports.getReferralStats = async(req, res) => {
 // Get package breakdown of a downline member (Safe for users)
 exports.getDownlineMemberPackages = async(req, res) => {
     try {
-        const referrerId = req.user.id; // The logged-in user
-        const memberId = req.params.id; // The member they clicked on
+        const referrerId = req.user.id; // The logged-in user (upline)
+        const memberId = req.params.id; // The downline member being analyzed
 
-        // 🟢 NEW SECURITY CHECK: Verify relationship within 6 levels
+        // 1. SECURITY CHECK: Verify relationship within 6 levels
         const verifyQuery = `
             WITH RECURSIVE downline_check AS (
-                -- Level 1: Direct referrals
                 SELECT id, referred_by, 1 as depth
                 FROM users
                 WHERE referred_by = $2
-                
                 UNION ALL
-                
-                -- Levels 2-6: Recursive search
                 SELECT u.id, u.referred_by, dc.depth + 1
                 FROM users u
                 INNER JOIN downline_check dc ON u.referred_by = dc.id
@@ -105,23 +101,28 @@ exports.getDownlineMemberPackages = async(req, res) => {
 
         const relationshipDepth = verifyRes.rows[0].depth;
 
-        // FETCH DATA: Join seats and packages
+        // 2. FETCH DATA: Join seats, packages, AND income_logs 
+        // We filter income_logs by referrerId to show only YOUR earnings from this member
         const query = `
             SELECT 
                 p.name as package_name,
                 p.ticket_price,
                 p.code as package_code,
                 s.booked_at,
-                s.income_type
+                s.income_type,
+                s.id as seat_id,
+                COALESCE(il.amount, 0) as commission_earned,
+                il.income_type as referral_type
             FROM seats s
             JOIN packages p ON s.package_id = p.id
+            LEFT JOIN income_logs il ON s.id = il.seat_id AND il.user_id = $2
             WHERE s.user_id = $1 AND s.status = 'OCCUPIED'
             ORDER BY s.booked_at DESC;
         `;
 
-        const result = await pool.query(query, [memberId]);
+        const result = await pool.query(query, [memberId, referrerId]);
 
-        // Return data + the depth level for the frontend to display
+        // Return enriched data
         res.json({
             packages: result.rows,
             depth: relationshipDepth
