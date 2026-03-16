@@ -1,27 +1,25 @@
 const pool = require("../config/db");
 const referralService = require("../services/referral.service");
 
-// ✅ BOOK SEAT (Fully Functional)
+// ✅ BOOK SEAT (Fully Functional - Managed via Seats Table)
 exports.bookSeat = async(req, res) => {
     const client = await pool.connect();
     try {
         const userId = req.user.id;
-        const { packageName, incomeType } = req.body;
+        let { packageName, incomeType } = req.body;
 
         // 1. Validation
-        if (!packageName) {
-            return res.status(400).json({ message: "Package name is required" });
-        }
-
-        const validTypes = ["DAILY", "MONTHLY", "YEARLY"];
-        if (!incomeType || !validTypes.includes(incomeType)) {
-            return res.status(400).json({ message: "Invalid Income Plan selected" });
+        if (!packageName || !incomeType) {
+            return res.status(400).json({ message: "Package name and Income Plan are required" });
         }
 
         await client.query("BEGIN");
 
-        // 2. Get Package Details
-        const pkgRes = await client.query("SELECT * FROM packages WHERE name = $1", [packageName]);
+        // 2. Get Package Details (Using UPPER to match DB standards)
+        const pkgRes = await client.query(
+            "SELECT * FROM packages WHERE UPPER(name) = $1", [packageName.toUpperCase()]
+        );
+
         if (pkgRes.rows.length === 0) {
             throw new Error("Package not found");
         }
@@ -30,15 +28,18 @@ exports.bookSeat = async(req, res) => {
         const BATCH_SIZE = pkg.total_seats || 180;
         const price = parseFloat(pkg.ticket_price);
 
-        // 3. Check User Wallet Balance
-        const walletRes = await client.query("SELECT balance FROM wallets WHERE user_id = $1", [userId]);
+        // 3. Check & Lock User Wallet Balance
+        // 'FOR UPDATE' prevents race conditions if multiple requests hit at once
+        const walletRes = await client.query(
+            "SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE", [userId]
+        );
         const userBalance = parseFloat((walletRes.rows[0] && walletRes.rows[0].balance) || 0);
 
         if (userBalance < price) {
             throw new Error(`Insufficient Balance. Required: $${price}, Available: $${userBalance}`);
         }
 
-        // 4. Calculate Batch & Seat Number
+        // 4. Calculate Current Batch & Seat Number based on existing OCCUPIED seats
         const countRes = await client.query(
             "SELECT COUNT(*) FROM seats WHERE package_id = $1 AND status = 'OCCUPIED'", [pkg.id]
         );
@@ -54,54 +55,38 @@ exports.bookSeat = async(req, res) => {
         await client.query(
             "UPDATE wallets SET balance = balance - $1 WHERE user_id = $2", [price, userId]
         );
-        // Updated to include income values from the package
-        // 7. Create Seat Record & CAPTURE THE ID 🚀
-        // 7. Create Seat Record & CAPTURE THE ID 🚀
+
+        // 7. Create Seat Record & Capture the ID
         const seatInsertRes = await client.query(
             `INSERT INTO seats (
-        user_id,          -- $1
-        package_id,       -- $2
-        seat_number,      -- $3
-        batch_number,     -- $4
-        status,           
-        booked_at,        
-        ots_income,       -- $5
-        income_type,      -- $6
-        daily_income,     -- $7
-        monthly_income,   -- $8
-        yearly_income,    -- $9
-        last_payout,      
-        days_remaining    
-    ) VALUES (
-        $1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, $7, $8, $9, NOW(), 365
-    ) 
-    RETURNING id`, [
-                userId, // $1
-                pkg.id, // $2
-                seatInBatch, // $3
-                currentBatch, // $4
-                otsBonus, // $5
-                incomeType, // $6
-                pkg.daily_income, // $7
-                pkg.monthly_income, // $8
-                pkg.yearly_income // $9
+                user_id, package_id, seat_number, batch_number, status, 
+                booked_at, ots_income, income_type, 
+                daily_income, monthly_income, yearly_income, 
+                last_payout, days_remaining
+            ) VALUES ($1, $2, $3, $4, 'OCCUPIED', NOW(), $5, $6, $7, $8, $9, NOW(), 365) 
+            RETURNING id`, [
+                userId, pkg.id, seatInBatch, currentBatch,
+                otsBonus, incomeType, pkg.daily_income,
+                pkg.monthly_income, pkg.yearly_income
             ]
         );
 
         const seatId = seatInsertRes.rows[0].id;
-        // 8. PAY INSTANT BONUS (Credit to Wallet)
+
+        // 8. PAY INSTANT OTS BONUS (If applicable)
         if (otsBonus > 0) {
             await client.query(
                 "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [otsBonus, userId]
             );
 
-            // Log OTS Income
             await client.query(
-                "INSERT INTO income_logs (user_id, amount, income_type, seat_id, created_at) VALUES ($1, $2, 'OTS_BONUS', $3, NOW())", [userId, otsBonus, seatId]
+                `INSERT INTO income_logs (user_id, amount, income_type, seat_id, created_at) 
+                 VALUES ($1, $2, 'OTS_BONUS', $3, NOW())`, [userId, otsBonus, seatId]
             );
         }
 
-        // 9. Process Referral Bonuses (Using the new seatId) 🚀
+        // 9. Process Referral Bonuses 🚀
+        // This function now internally queries the 'seats' table for width counting
         await referralService.processReferralBonuses(userId, price, seatId, pkg.id);
 
         await client.query("COMMIT");
@@ -127,7 +112,7 @@ exports.bookSeat = async(req, res) => {
     }
 };
 
-// ✅ Get All Bookings for Admin (Updated to show Income Type)
+// ✅ Get All Bookings for Admin
 exports.getAllBookings = async(req, res) => {
     try {
         const query = `
@@ -137,8 +122,8 @@ exports.getAllBookings = async(req, res) => {
                 s.booked_at, 
                 s.income_type,
                 p.name as package_name, 
-                p.ticket_price, -- Aliased for frontend consistency
-                u.id as user_id,        -- 👈 CRITICAL: Added this to fix #N/A
+                p.ticket_price,
+                u.id as user_id,
                 u.email,
                 u.name as user_name
             FROM seats s

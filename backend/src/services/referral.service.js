@@ -92,7 +92,7 @@ exports.processReferralBonuses = async(buyerId, ticketPrice, seatId, packageId) 
     let currentUserId = buyerId;
 
     for (let level = 1; level <= 6; level++) {
-        // Find the parent (referrer)
+        // 1. Find the parent (referrer)
         const userRes = await pool.query(
             "SELECT referred_by FROM users WHERE id = $1", [currentUserId]
         );
@@ -105,21 +105,26 @@ exports.processReferralBonuses = async(buyerId, ticketPrice, seatId, packageId) 
         let bonusAmount = 0;
         let logType = `REFERRAL_L${level}`;
 
-        // --- LEVEL 1: NEW PACKAGE-SPECIFIC WIDTH LOGIC ---
+        // --- LEVEL 1: PACKAGE-SPECIFIC WIDTH LOGIC (Counting from Seats) ---
         if (level === 1) {
-            // A. Count how many SUCCESSFUL referrals this parent has for THIS SPECIFIC package
+            // A. Count how many OCCUPIED seats this parent's direct referrals have for THIS package
+            // We join 'seats' with 'users' to check who the seat belongs to.
             const countRes = await pool.query(
-                `SELECT COUNT(*) FROM bookings 
-                 WHERE referrer_id = $1 AND package_id = $2 AND status = 'SUCCESS'`, [parentId, packageId]
+                `SELECT COUNT(s.id) 
+                 FROM seats s
+                 JOIN users u ON s.user_id = u.id
+                 WHERE u.referred_by = $1 
+                   AND s.package_id = $2 
+                   AND s.status = 'OCCUPIED'
+                   AND s.id != $3`, // Exclude the current seat being processed
+                [parentId, packageId, seatId]
             );
 
-            // This purchase is the (Count + 1)th referral for this specific package
+            // This purchase is the (Count + 1)th referral
             let widthLevel = parseInt(countRes.rows[0].count) + 1;
-
-            // Cap at 9 as per your database table design
             if (widthLevel > 9) widthLevel = 9;
 
-            // B. Get the percentage from your new rules table
+            // B. Get the commission percentage for this specific package tier
             const ruleRes = await pool.query(
                 `SELECT commission_percent FROM referral_width_rules 
                  WHERE package_id = $1 AND width_level = $2`, [packageId, widthLevel]
@@ -128,7 +133,6 @@ exports.processReferralBonuses = async(buyerId, ticketPrice, seatId, packageId) 
             if (ruleRes.rows.length > 0) {
                 const percent = Number(ruleRes.rows[0].commission_percent);
                 bonusAmount = (ticketPrice * percent) / 100;
-                // Specific log type for auditing: e.g., REFERRAL_WIDTH_P1_W3
                 logType = `REFERRAL_WIDTH_P${packageId}_W${widthLevel}`;
             }
         }
@@ -147,19 +151,19 @@ exports.processReferralBonuses = async(buyerId, ticketPrice, seatId, packageId) 
 
         // --- EXECUTE PAYMENT ---
         if (bonusAmount > 0) {
-            // 1. Update Upline Wallet
+            // 1. Update Parent Wallet
             await pool.query(
                 "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [bonusAmount, parentId]
             );
 
-            // 2. Log the Transaction with seat_id for the front-end table
+            // 2. Log Transaction (seat_id links this income to the specific seat)
             await pool.query(
                 `INSERT INTO income_logs (user_id, income_type, amount, seat_id, created_at) 
                  VALUES ($1, $2, $3, $4, NOW())`, [parentId, logType, bonusAmount, seatId]
             );
         }
 
-        // Move up to the next parent
+        // Move to the next level up
         currentUserId = parentId;
     }
 };
