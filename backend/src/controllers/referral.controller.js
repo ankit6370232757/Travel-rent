@@ -74,16 +74,36 @@ exports.getReferralStats = async(req, res) => {
 exports.getDownlineMemberPackages = async(req, res) => {
     try {
         const referrerId = req.user.id; // The logged-in user
-        const memberId = req.params.id; // The downline member they are clicking on
+        const memberId = req.params.id; // The member they clicked on
 
-        // SECURITY CHECK: Ensure the memberId is actually in the user's downline 
-        // to prevent users from snooping on random people's data.
-        const verifyQuery = `SELECT 1 FROM users WHERE id = $1 AND referred_by = $2`;
+        // 🟢 NEW SECURITY CHECK: Verify relationship within 6 levels
+        const verifyQuery = `
+            WITH RECURSIVE downline_check AS (
+                -- Level 1: Direct referrals
+                SELECT id, referred_by, 1 as depth
+                FROM users
+                WHERE referred_by = $2
+                
+                UNION ALL
+                
+                -- Levels 2-6: Recursive search
+                SELECT u.id, u.referred_by, dc.depth + 1
+                FROM users u
+                INNER JOIN downline_check dc ON u.referred_by = dc.id
+                WHERE dc.depth < 6
+            )
+            SELECT depth FROM downline_check WHERE id = $1 LIMIT 1;
+        `;
+
         const verifyRes = await pool.query(verifyQuery, [memberId, referrerId]);
 
         if (verifyRes.rows.length === 0) {
-            return res.status(403).json({ message: "Access denied. Member is not in your direct network." });
+            return res.status(403).json({
+                message: "Access denied. Member is not within your 6-level network."
+            });
         }
+
+        const relationshipDepth = verifyRes.rows[0].depth;
 
         // FETCH DATA: Join seats and packages
         const query = `
@@ -91,7 +111,8 @@ exports.getDownlineMemberPackages = async(req, res) => {
                 p.name as package_name,
                 p.ticket_price,
                 p.code as package_code,
-                s.booked_at
+                s.booked_at,
+                s.income_type
             FROM seats s
             JOIN packages p ON s.package_id = p.id
             WHERE s.user_id = $1 AND s.status = 'OCCUPIED'
@@ -99,7 +120,12 @@ exports.getDownlineMemberPackages = async(req, res) => {
         `;
 
         const result = await pool.query(query, [memberId]);
-        res.json(result.rows);
+
+        // Return data + the depth level for the frontend to display
+        res.json({
+            packages: result.rows,
+            depth: relationshipDepth
+        });
 
     } catch (err) {
         console.error("Downline Package Error:", err.message);
