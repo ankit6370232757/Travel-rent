@@ -575,7 +575,6 @@ exports.updatePackage = async (req, res) => {
                 yearly_income = $7, 
                 ots_income = $8, 
                 description = $9, 
-                updated_at = NOW()
             WHERE id = $10 
             RETURNING *;`;
 
