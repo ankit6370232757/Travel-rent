@@ -198,25 +198,35 @@ exports.addPackage = async(req, res) => {
     try {
         const { name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date } = req.body;
 
-        // Simple validation
-        if (!name || !ticket_price) {
-            return res.status(400).json({ message: "Name and Price are required" });
+        if (!name || !ticket_price || !code) {
+            return res.status(400).json({ message: "Name, Code and Price are required" });
         }
 
         const query = `
-      INSERT INTO packages 
-      (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, effective_date, is_active) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), TRUE) 
-      RETURNING *`;
+            INSERT INTO packages 
+            (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, effective_date, is_active) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9, TRUE) 
+            RETURNING *`;
 
-        const values = [name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date || new Date()];
+        // Ensure all 9 values are mapped correctly
+        const values = [
+            name, 
+            code, 
+            total_seats || 180, 
+            ticket_price, 
+            daily_income || 0, 
+            monthly_income || 0, 
+            yearly_income || 0, 
+            ots_income || 0, 
+            effective_date || new Date()
+        ];
 
         const newPkg = await pool.query(query, values);
         res.json(newPkg.rows[0]);
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to add package" });
+        console.error("ADD PACKAGE ERROR:", err);
+        res.status(500).json({ message: err.message });
     }
 };
 
@@ -433,12 +443,15 @@ exports.updateSettings = async(req, res) => {
 
 exports.getAllPackages = async(req, res) => {
     try {
-        // This query counts how many seats are 'OCCUPIED' for each package
-        // by joining the packages table with the seats table.
         const query = `
             SELECT 
                 p.*, 
-                COALESCE(s.occupied_count, 0) as filled_seats
+                COALESCE(s.occupied_count, 0) as filled_seats,
+                -- Logic: floor(occupied / total_seats) + 1
+                CASE 
+                    WHEN p.total_seats > 0 THEN FLOOR(COALESCE(s.occupied_count, 0) / p.total_seats) + 1 
+                    ELSE 1 
+                END as current_batch
             FROM packages p
             LEFT JOIN (
                 SELECT package_id, COUNT(*) as occupied_count 
@@ -448,16 +461,13 @@ exports.getAllPackages = async(req, res) => {
             ) s ON p.id = s.package_id
             ORDER BY p.id ASC
         `;
-
         const result = await pool.query(query);
-
-        // Return the rows to the frontend
         res.json(result.rows);
     } catch (err) {
-        console.error("Error fetching package inventory:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ message: "Server error fetching tracker" });
     }
 };
+
 exports.getAllFinanceLogs = async(req, res) => {
     try {
         const query = `
@@ -546,63 +556,29 @@ exports.getPendingCount = async(req, res) => {
 exports.updatePackage = async(req, res) => {
     try {
         const { id } = req.params;
-        const {
-            name,
-            code,
-            ticket_price,
-            total_seats,
-            daily_income,
-            monthly_income,
-            yearly_income,
-            ots_income
-        } = req.body;
+        const { name,
+             code,
+              ticket_price,
+               total_seats,
+                daily_income,
+                 monthly_income,
+                  yearly_income, ots_income, effective_date } = req.body;
 
         const query = `
             UPDATE packages 
-            SET name = $1, 
-                code = $2, 
-                ticket_price = $3, 
-                total_seats = $4, 
-                daily_income = $5, 
-                monthly_income = $6, 
-                yearly_income = $7, 
-                ots_income = $8,
-                updated_at = NOW()
-            WHERE id = $9
-            RETURNING *;
-        `;
+            SET name = $1, code = $2, ticket_price = $3, total_seats = $4, 
+                daily_income = $5, monthly_income = $6, yearly_income = $7, 
+                ots_income = $8, effective_date = $9, updated_at = NOW()
+            WHERE id = $10 RETURNING *;`;
 
-        const values = [
-            name,
-            code,
-            ticket_price,
-            total_seats,
-            daily_income,
-            monthly_income,
-            yearly_income,
-            ots_income,
-            id
-        ];
-
+        const values = [name, code, ticket_price, total_seats, daily_income, monthly_income, yearly_income, ots_income, effective_date, id];
         const result = await pool.query(query, values);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Package not found" });
-        }
-
-        res.json({
-            success: true,
-            message: "Package updated successfully",
-            data: result.rows[0]
-        });
-
+        if (result.rows.length === 0) return res.status(404).json({ message: "Package not found" });
+        res.json({ success: true, data: result.rows[0] });
     } catch (err) {
-        console.error("Update Package Error:", err);
-        // Handle unique constraint violation for the 'code' column
-        if (err.code === '23505') {
-            return res.status(400).json({ message: "Package code already exists. Please use a unique code." });
-        }
-        res.status(500).json({ message: "Internal server error during update" });
+        console.error("UPDATE PACKAGE ERROR:", err);
+        res.status(500).json({ message: "Server error during update" });
     }
 };
 
