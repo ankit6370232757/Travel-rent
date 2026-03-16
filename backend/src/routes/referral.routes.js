@@ -12,4 +12,7 @@ router.get("/tree", authMiddleware, referralController.getReferralTree);
 // Get referral width stats per package for the logged-in user
 router.get("/stats/width", authMiddleware, referralController.getReferralStats);
 
+// Safe route for referrers to see what packages their directs have bought
+router.get("/member-packages/:id", authMiddleware, referralController.getDownlineMemberPackages);
+
 module.exports = router;

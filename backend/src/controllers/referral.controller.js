@@ -69,3 +69,40 @@ exports.getReferralStats = async(req, res) => {
         res.status(500).json({ message: "Failed to load referral stats" });
     }
 };
+
+// Get package breakdown of a downline member (Safe for users)
+exports.getDownlineMemberPackages = async(req, res) => {
+    try {
+        const referrerId = req.user.id; // The logged-in user
+        const memberId = req.params.id; // The downline member they are clicking on
+
+        // SECURITY CHECK: Ensure the memberId is actually in the user's downline 
+        // to prevent users from snooping on random people's data.
+        const verifyQuery = `SELECT 1 FROM users WHERE id = $1 AND referred_by = $2`;
+        const verifyRes = await pool.query(verifyQuery, [memberId, referrerId]);
+
+        if (verifyRes.rows.length === 0) {
+            return res.status(403).json({ message: "Access denied. Member is not in your direct network." });
+        }
+
+        // FETCH DATA: Join seats and packages
+        const query = `
+            SELECT 
+                p.name as package_name,
+                p.ticket_price,
+                p.code as package_code,
+                s.booked_at
+            FROM seats s
+            JOIN packages p ON s.package_id = p.id
+            WHERE s.user_id = $1 AND s.status = 'OCCUPIED'
+            ORDER BY s.booked_at DESC;
+        `;
+
+        const result = await pool.query(query, [memberId]);
+        res.json(result.rows);
+
+    } catch (err) {
+        console.error("Downline Package Error:", err.message);
+        res.status(500).json({ message: "Server error fetching member data" });
+    }
+};
