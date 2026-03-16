@@ -553,32 +553,57 @@ exports.getPendingCount = async(req, res) => {
     }
 };
 // Update Package Details (Inline Editing)
-exports.updatePackage = async(req, res) => {
+exports.updatePackage = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name,
-             code,
-              ticket_price,
-               total_seats,
-                daily_income,
-                 monthly_income,
-                  yearly_income, ots_income, description } = req.body;
+        
+        // Strictly pull only these fields from the request body
+        const { 
+            name, code, ticket_price, total_seats, 
+            daily_income, monthly_income, yearly_income, 
+            ots_income, description 
+        } = req.body;
 
         const query = `
             UPDATE packages 
-            SET name = $1, code = $2, ticket_price = $3, total_seats = $4, 
-                daily_income = $5, monthly_income = $6, yearly_income = $7, 
-                ots_income = $8, description=$9, updated_at = NOW()
-            WHERE id = $10 RETURNING *;`;
+            SET name = $1, 
+                code = $2, 
+                ticket_price = $3, 
+                total_seats = $4, 
+                daily_income = $5, 
+                monthly_income = $6, 
+                yearly_income = $7, 
+                ots_income = $8, 
+                description = $9, 
+                updated_at = NOW()
+            WHERE id = $10 
+            RETURNING *;`;
 
-        const values = [name, code, ticket_price, total_seats, daily_income, monthly_income, yearly_income, ots_income, description, id];
+        const values = [
+            name, 
+            code, 
+            ticket_price, 
+            total_seats, 
+            daily_income || 0, 
+            monthly_income || 0, 
+            yearly_income || 0, 
+            ots_income || 0, 
+            description || '', 
+            id
+        ];
+
         const result = await pool.query(query, values);
 
-        if (result.rows.length === 0) return res.status(404).json({ message: "Package not found" });
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Package not found" });
+        }
+
         res.json({ success: true, data: result.rows[0] });
+
     } catch (err) {
-        console.error("UPDATE PACKAGE ERROR:", err);
-        res.status(500).json({ message: "Server error during update" });
+        console.error("SQL UPDATE ERROR:", err.message);
+        // This will send the ACTUAL database error to your frontend console
+        res.status(500).json({ message: "DB Error: " + err.message });
     }
 };
 
