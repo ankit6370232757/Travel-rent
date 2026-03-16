@@ -568,7 +568,7 @@ exports.updatePackage = async(req, res) => {
             UPDATE packages 
             SET name = $1, code = $2, ticket_price = $3, total_seats = $4, 
                 daily_income = $5, monthly_income = $6, yearly_income = $7, 
-                ots_income = $8, updated_at = NOW(), description=$9,
+                ots_income = $8, description=$9, updated_at = NOW()
             WHERE id = $10 RETURNING *;`;
 
         const values = [name, code, ticket_price, total_seats, daily_income, monthly_income, yearly_income, ots_income, description, id];
