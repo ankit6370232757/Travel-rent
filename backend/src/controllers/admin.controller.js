@@ -196,7 +196,7 @@ exports.getPackages = async(req, res) => {
 // 2. Add New Package (Matches your DB columns)
 exports.addPackage = async(req, res) => {
     try {
-        const { name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date } = req.body;
+        const { name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, effective_date, description } = req.body;
 
         if (!name || !ticket_price || !code) {
             return res.status(400).json({ message: "Name, Code and Price are required" });
@@ -204,8 +204,8 @@ exports.addPackage = async(req, res) => {
 
         const query = `
             INSERT INTO packages 
-            (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, effective_date, is_active) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9, TRUE) 
+            (name, code, total_seats, ticket_price, daily_income, monthly_income, yearly_income, ots_income, created_at, effective_date, is_active, description) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9, TRUE, $10) 
             RETURNING *`;
 
         // Ensure all 9 values are mapped correctly
@@ -218,7 +218,8 @@ exports.addPackage = async(req, res) => {
             monthly_income || 0, 
             yearly_income || 0, 
             ots_income || 0, 
-            effective_date || new Date()
+            effective_date || new Date(),
+            description
         ];
 
         const newPkg = await pool.query(query, values);
@@ -562,16 +563,16 @@ exports.updatePackage = async(req, res) => {
                total_seats,
                 daily_income,
                  monthly_income,
-                  yearly_income, ots_income, effective_date } = req.body;
+                  yearly_income, ots_income, effective_date, description } = req.body;
 
         const query = `
             UPDATE packages 
             SET name = $1, code = $2, ticket_price = $3, total_seats = $4, 
                 daily_income = $5, monthly_income = $6, yearly_income = $7, 
-                ots_income = $8, effective_date = $9, updated_at = NOW()
-            WHERE id = $10 RETURNING *;`;
+                ots_income = $8, effective_date = $9, updated_at = NOW(), description=$10,
+            WHERE id = $11 RETURNING *;`;
 
-        const values = [name, code, ticket_price, total_seats, daily_income, monthly_income, yearly_income, ots_income, effective_date, id];
+        const values = [name, code, ticket_price, total_seats, daily_income, monthly_income, yearly_income, ots_income, effective_date, description, id];
         const result = await pool.query(query, values);
 
         if (result.rows.length === 0) return res.status(404).json({ message: "Package not found" });
