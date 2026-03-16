@@ -30,6 +30,22 @@ exports.getSeatStatus = async(req, res) => {
         const seatsInCurrentBatch = filledSeats % BATCH_SIZE;
         const remainingSeats = BATCH_SIZE - seatsInCurrentBatch;
 
+// 4. NEW: Get the Start Date of the CURRENT Batch
+        // We find the 'booked_at' date of the very first seat in the current batch range
+        const offset = (currentBatch - 1) * BATCH_SIZE;
+        const batchStartRes = await pool.query(
+            `SELECT booked_at FROM seats 
+             WHERE package_id = $1 AND status = 'OCCUPIED' 
+             ORDER BY booked_at ASC 
+             LIMIT 1 OFFSET $2`, 
+            [pkg.id, offset]
+        );
+
+        // If batch has started, use first seat's date. Otherwise, use package created_at.
+        const batchStartDate = batchStartRes.rows.length > 0 
+            ? batchStartRes.rows[0].booked_at 
+            : pkg.created_at;
+
         res.json({
             // Package Info
             id: pkg.id,
@@ -41,6 +57,7 @@ exports.getSeatStatus = async(req, res) => {
             ots_income: pkg.ots_income,
             code: pkg.code,
             createdAt: pkg.created_at,
+            batchStartDate: batchStartDate, // 🟢 NEW FIELD
             // Batch & Seat Info
             batchSize: BATCH_SIZE,
             currentBatch: currentBatch,
