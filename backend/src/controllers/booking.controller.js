@@ -91,7 +91,7 @@ exports.bookSeat = async(req, res) => {
         }
 
         // 9. Process Referral Bonuses (Using the new seatId) 🚀
-        await referralService.processReferralBonuses(userId, price, seatId);
+        await referralService.processReferralBonuses(userId, price, seatId, pkg.id);
 
         await client.query("COMMIT");
 

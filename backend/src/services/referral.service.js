@@ -88,65 +88,78 @@ exports.processWidthReferral = async(userId) => {
          VALUES ($1, $2, $3)`, [userId, incomeType, reward]
     );
 };
-exports.processReferralBonuses = async(buyerId, ticketPrice, seatId) => { // 👈 Added seatId here
+exports.processReferralBonuses = async(buyerId, ticketPrice, seatId, packageId) => {
     let currentUserId = buyerId;
 
     for (let level = 1; level <= 6; level++) {
+        // Find the parent (referrer)
         const userRes = await pool.query(
             "SELECT referred_by FROM users WHERE id = $1", [currentUserId]
         );
 
         if (userRes.rows.length === 0 || !userRes.rows[0].referred_by) {
-            break;
+            break; // Stop if no referrer
         }
 
         const parentId = userRes.rows[0].referred_by;
+        let bonusAmount = 0;
+        let logType = `REFERRAL_L${level}`;
 
-        // 1. Fetch Depth Percentage
-        const depthRule = await pool.query(
-            "SELECT percentage FROM referral_depth_rules WHERE level = $1", [level]
-        );
-
-        let percent = 0;
-        if (depthRule.rows && depthRule.rows.length > 0) {
-            percent = Number(depthRule.rows[0].percentage);
-        }
-
-        let bonusAmount = (ticketPrice * percent) / 100;
-
-        // 2. Apply Width Fixed Bonus (Direct Referrer Only)
+        // --- LEVEL 1: NEW PACKAGE-SPECIFIC WIDTH LOGIC ---
         if (level === 1) {
+            // A. Count how many SUCCESSFUL referrals this parent has for THIS SPECIFIC package
             const countRes = await pool.query(
-                "SELECT COUNT(*) FROM users WHERE referred_by = $1", [parentId]
-            );
-            const refCount = parseInt(countRes.rows[0].count);
-
-            const widthRule = await pool.query(
-                "SELECT reward_amount FROM referral_width_rules WHERE required_referrals = $1", [refCount]
+                `SELECT COUNT(*) FROM bookings 
+                 WHERE referrer_id = $1 AND package_id = $2 AND status = 'SUCCESS'`, [parentId, packageId]
             );
 
-            let widthBonus = 0;
-            if (widthRule.rows && widthRule.rows.length > 0) {
-                widthBonus = Number(widthRule.rows[0].reward_amount);
+            // This purchase is the (Count + 1)th referral for this specific package
+            let widthLevel = parseInt(countRes.rows[0].count) + 1;
+
+            // Cap at 9 as per your database table design
+            if (widthLevel > 9) widthLevel = 9;
+
+            // B. Get the percentage from your new rules table
+            const ruleRes = await pool.query(
+                `SELECT commission_percent FROM referral_width_rules 
+                 WHERE package_id = $1 AND width_level = $2`, [packageId, widthLevel]
+            );
+
+            if (ruleRes.rows.length > 0) {
+                const percent = Number(ruleRes.rows[0].commission_percent);
+                bonusAmount = (ticketPrice * percent) / 100;
+                // Specific log type for auditing: e.g., REFERRAL_WIDTH_P1_W3
+                logType = `REFERRAL_WIDTH_P${packageId}_W${widthLevel}`;
             }
-
-            bonusAmount += widthBonus;
         }
 
+        // --- LEVELS 2-6: STANDARD DEPTH LOGIC ---
+        else {
+            const depthRule = await pool.query(
+                "SELECT percentage FROM referral_depth_rules WHERE level = $1", [level]
+            );
+
+            if (depthRule.rows.length > 0) {
+                const depthPercent = Number(depthRule.rows[0].percentage);
+                bonusAmount = (ticketPrice * depthPercent) / 100;
+            }
+        }
+
+        // --- EXECUTE PAYMENT ---
         if (bonusAmount > 0) {
-            // 3. Update Wallet
+            // 1. Update Upline Wallet
             await pool.query(
                 "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [bonusAmount, parentId]
             );
 
-            // 4. 🟢 EDITED: Log Transaction with seat_id
-            // This is the CRITICAL fix so earnings show up in your table.
+            // 2. Log the Transaction with seat_id for the front-end table
             await pool.query(
                 `INSERT INTO income_logs (user_id, income_type, amount, seat_id, created_at) 
-                 VALUES ($1, $2, $3, $4, NOW())`, [parentId, "REFERRAL_L" + level, bonusAmount, seatId] // 👈 Added seatId here
+                 VALUES ($1, $2, $3, $4, NOW())`, [parentId, logType, bonusAmount, seatId]
             );
         }
 
+        // Move up to the next parent
         currentUserId = parentId;
     }
 };

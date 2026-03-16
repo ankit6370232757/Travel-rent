@@ -9,4 +9,7 @@ router.get("/my-network", authMiddleware, referralController.getReferralTree);
 // (Optional) Keep this if you use it elsewhere, or remove it
 router.get("/tree", authMiddleware, referralController.getReferralTree);
 
+// Get referral width stats per package for the logged-in user
+router.get("/stats/width", authMiddleware, referralController.getReferralStats);
+
 module.exports = router;

@@ -605,3 +605,22 @@ exports.updatePackage = async(req, res) => {
         res.status(500).json({ message: "Internal server error during update" });
     }
 };
+
+exports.updateReferralRule = async(req, res) => {
+    try {
+        const { package_id, width_level, commission_percent } = req.body;
+
+        const query = `
+            INSERT INTO referral_width_rules (package_id, width_level, commission_percent)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (package_id, width_level) 
+            DO UPDATE SET commission_percent = EXCLUDED.commission_percent
+            RETURNING *;
+        `;
+
+        const result = await pool.query(query, [package_id, width_level, commission_percent]);
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to update rule" });
+    }
+};
