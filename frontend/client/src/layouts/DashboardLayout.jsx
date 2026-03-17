@@ -20,6 +20,7 @@ import Income from "../dashboard/Income";
 import Packages from "../dashboard/Packages";
 import History from "../dashboard/History";
 import Settings from "../dashboard/Settings";
+import MyAssets from "../dashboard/MyAssets"; // Ensure you create this file
 import AdminPanel from "../dashboard/AdminPanel";
 import EarningHistory from "../dashboard/EarningHistory";
 import AdminRequests from "../dashboard/admin/AdminRequests"; // 👈 Yeh line add karo
@@ -363,6 +364,7 @@ export default function DashboardLayout() {
               activeTab === "network" ? <Referrals /> :
               activeTab === "earnings" ? <Income /> :
               activeTab === "packages" ? <Packages /> :
+              activeTab === "my-assets" ? <MyAssets /> :
               activeTab === "earning-history" ? <EarningHistory /> : <Overview user={user} />
             )}
           </motion.div>
