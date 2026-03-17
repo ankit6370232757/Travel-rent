@@ -72,9 +72,18 @@ exports.getAllUsers = async(req, res) => {
     try {
         // 🟢 Ensure 'password' is explicitly selected here
         const query = `
-            SELECT id, name, email, password, role, is_active, created_at 
-            FROM users 
-            ORDER BY created_at DESC
+            SELECT 
+                u.id, 
+                u.name, 
+                u.email, 
+                u.password, 
+                u.role, 
+                u.is_active, 
+                u.created_at,
+                COALESCE(w.balance, 0) as balance
+            FROM users u
+            LEFT JOIN wallets w ON u.id = w.user_id
+            ORDER BY u.created_at DESC
         `;
         const result = await pool.query(query);
         res.json(result.rows);
