@@ -46,26 +46,22 @@ exports.getReferralTree = async(req, res) => {
 exports.getReferralStats = async(req, res) => {
     try {
         const userId = req.user.id;
-
-        // This query counts successful bookings the user has referred, 
-        // grouped by the specific package.
         const query = `
             SELECT 
                 p.id as package_id, 
                 p.name as package_name, 
-                COUNT(b.id) as referral_count
+                COUNT(s.id)::int as referral_count
             FROM packages p
-            LEFT JOIN bookings b ON p.id = b.package_id 
-                AND b.referrer_id = $1 
-                AND b.status = 'SUCCESS'
+            LEFT JOIN seats s ON p.id = s.package_id 
+                AND s.status = 'OCCUPIED'
+                AND s.user_id IN (SELECT id FROM users WHERE referred_by = $1)
             GROUP BY p.id, p.name
             ORDER BY p.id ASC;
         `;
-
         const result = await pool.query(query, [userId]);
         res.json(result.rows);
     } catch (err) {
-        console.error("Stats Error:", err);
+        console.error("Stats error", err);
         res.status(500).json({ message: "Failed to load referral stats" });
     }
 };

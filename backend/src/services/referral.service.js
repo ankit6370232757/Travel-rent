@@ -92,78 +92,59 @@ exports.processReferralBonuses = async(buyerId, ticketPrice, seatId, packageId) 
     let currentUserId = buyerId;
 
     for (let level = 1; level <= 6; level++) {
-        // 1. Find the parent (referrer)
+        // Find the parent (referrer)
         const userRes = await pool.query(
             "SELECT referred_by FROM users WHERE id = $1", [currentUserId]
         );
 
-        if (userRes.rows.length === 0 || !userRes.rows[0].referred_by) {
-            break; // Stop if no referrer
-        }
+        if (userRes.rows.length === 0 || !userRes.rows[0].referred_by) break;
 
         const parentId = userRes.rows[0].referred_by;
         let bonusAmount = 0;
         let logType = `REFERRAL_L${level}`;
 
-        // --- LEVEL 1: PACKAGE-SPECIFIC WIDTH LOGIC (Counting from Seats) ---
+        // --- LEVEL 1: LINEAR PACKAGE WIDTH (10% -> 18%) ---
         if (level === 1) {
-            // A. Count how many OCCUPIED seats this parent's direct referrals have for THIS package
-            // We join 'seats' with 'users' to check who the seat belongs to.
+            // Count total seats of THIS package already owned by YOUR direct referrals
             const countRes = await pool.query(
-                `SELECT COUNT(s.id) 
-                 FROM seats s
+                `SELECT COUNT(s.id)::int FROM seats s
                  JOIN users u ON s.user_id = u.id
-                 WHERE u.referred_by = $1 
-                   AND s.package_id = $2 
-                   AND s.status = 'OCCUPIED'
-                   AND s.id != $3`, // Exclude the current seat being processed
-                [parentId, packageId, seatId]
+                 WHERE u.referred_by = $1 AND s.package_id = $2 
+                 AND s.status = 'OCCUPIED' AND s.id != $3`, [parentId, packageId, seatId]
             );
 
-            // This purchase is the (Count + 1)th referral
-            let widthLevel = parseInt(countRes.rows[0].count) + 1;
-            if (widthLevel > 9) widthLevel = 9;
+            const previousSales = countRes.rows[0].count;
 
-            // B. Get the commission percentage for this specific package tier
-            const ruleRes = await pool.query(
-                `SELECT commission_percent FROM referral_width_rules 
-                 WHERE package_id = $1 AND width_level = $2`, [packageId, widthLevel]
-            );
+            // Logic: Start 10%. Add 1% for every previous sale.
+            // 1st sale (0 prev): 10%
+            // 2nd sale (1 prev): 11%
+            // 9th sale (8 prev): 18%
+            let percent = 10 + previousSales;
 
-            if (ruleRes.rows.length > 0) {
-                const percent = Number(ruleRes.rows[0].commission_percent);
-                bonusAmount = (ticketPrice * percent) / 100;
-                logType = `REFERRAL_WIDTH_P${packageId}_W${widthLevel}`;
-            }
+            // Cap at 18% max
+            if (percent > 18) percent = 18;
+
+            bonusAmount = (ticketPrice * percent) / 100;
+            logType = `REFERRAL_WIDTH_P${packageId}_S${previousSales + 1}`;
         }
 
-        // --- LEVELS 2-6: STANDARD DEPTH LOGIC ---
+        // --- LEVELS 2-6: STANDARD DEPTH ---
         else {
             const depthRule = await pool.query(
                 "SELECT percentage FROM referral_depth_rules WHERE level = $1", [level]
             );
-
             if (depthRule.rows.length > 0) {
-                const depthPercent = Number(depthRule.rows[0].percentage);
-                bonusAmount = (ticketPrice * depthPercent) / 100;
+                bonusAmount = (ticketPrice * Number(depthRule.rows[0].percentage)) / 100;
             }
         }
 
-        // --- EXECUTE PAYMENT ---
         if (bonusAmount > 0) {
-            // 1. Update Parent Wallet
-            await pool.query(
-                "UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [bonusAmount, parentId]
-            );
-
-            // 2. Log Transaction (seat_id links this income to the specific seat)
+            await pool.query("UPDATE wallets SET balance = balance + $1 WHERE user_id = $2", [bonusAmount, parentId]);
             await pool.query(
                 `INSERT INTO income_logs (user_id, income_type, amount, seat_id, created_at) 
                  VALUES ($1, $2, $3, $4, NOW())`, [parentId, logType, bonusAmount, seatId]
             );
         }
-
-        // Move to the next level up
         currentUserId = parentId;
     }
 };
