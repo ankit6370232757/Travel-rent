@@ -74,7 +74,6 @@ exports.getSeatStatus = async(req, res) => {
     }
 };
 
-// admin.controller.js
 exports.getAllPackagesWithStatus = async (req, res) => {
     try {
         const query = `
@@ -84,23 +83,27 @@ exports.getAllPackagesWithStatus = async (req, res) => {
                 COALESCE(s.total_occupied, 0) as "filledSeats",
                 (COALESCE(s.total_occupied, 0) % p.total_seats) as "seatsInCurrentBatch",
                 FLOOR(COALESCE(s.total_occupied, 0) / p.total_seats) + 1 as "currentBatch",
-                p.created_at as "batchStartDate" 
+                -- Fallback to created_at if no seats are booked yet
+                COALESCE(s.first_booking, p.created_at) as "batchStartDate"
             FROM packages p
             LEFT JOIN (
-                SELECT package_id, COUNT(*) as total_occupied 
-                FROM seats WHERE status = 'OCCUPIED' 
+                SELECT 
+                    package_id, 
+                    COUNT(*) as total_occupied,
+                    MIN(booked_at) as first_booking
+                FROM seats 
+                WHERE status = 'OCCUPIED' 
                 GROUP BY package_id
             ) s ON p.id = s.package_id
             WHERE p.is_active = TRUE
             ORDER BY p.ticket_price ASC;
         `;
-        // Note: I simplified batchStartDate to p.created_at temporarily to see if it fixes the 500 error.
         
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
-        console.error("DATABASE ERROR:", err.message);
-        res.status(500).json({ message: "Internal Server Error", error: err.message });
+        console.error("GET ALL STATUS ERROR:", err.message);
+        res.status(500).json({ message: "Database Error", error: err.message });
     }
 };
 
