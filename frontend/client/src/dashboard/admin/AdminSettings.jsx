@@ -108,20 +108,35 @@ export default function AdminSettings() {
     setSettings({ ...settings, [e.target.name]: value });
   };
 
-  const handleToggle = (key) => {
-    setSettings({ ...settings, [key]: !settings[key] });
-  };
+// 🟢 1. Handle Toggles (Live Update)
+const handleToggle = async (key) => {
+    const newValue = !settings[key];
+    
+    // Update UI immediately
+    setSettings(prev => ({ ...prev, [key]: newValue }));
 
-  // 💾 2. Save Data
-  const saveSettings = async () => {
-    const load = toast.loading("Updating Global configuration...");
+    const load = toast.loading(`Switching ${key}...`);
     try {
-      await api.post("/admin/settings", settings);
-      toast.success("System parameters synced!", { id: load });
+        // We send the whole settings object but ensure the specific key is the NEW value
+        await api.post("/admin/settings", { ...settings, [key]: newValue });
+        toast.success("Status updated in database", { id: load });
     } catch (err) {
-      toast.error("Cloud synchronization failed", { id: load });
+        toast.error("Database sync failed", { id: load });
+        setSettings(prev => ({ ...prev, [key]: !newValue })); // Rollback
     }
-  };
+};
+
+// 💾 2. Save Settings (For Text/Numbers)
+const saveSettings = async () => {
+    const load = toast.loading("Saving text configurations...");
+    try {
+        // This saves everything currently in the state (including current toggle positions)
+        await api.post("/admin/settings", settings);
+        toast.success("All parameters synced!", { id: load });
+    } catch (err) {
+        toast.error("Failed to save text fields", { id: load });
+    }
+};
 
   if (loading) return <div style={{padding: 100, textAlign: 'center', color: '#444'}}>Loading Terminal Config...</div>;
 
@@ -162,16 +177,30 @@ export default function AdminSettings() {
                         <span>Withdrawal System</span>
                         <small>{settings.withdraw_status ? "Operational" : "Disabled"}</small>
                     </div>
-                    <Switch active={settings.withdraw_status} onClick={() => handleToggle('withdraw_status')} />
-                </ControlRow>
+                    <Switch 
+                        type="button"
+                        active={settings.withdraw_status} 
+                        onClick={(e) => {
+                            e.preventDefault(); // Prevent any form submission side effects
+                            handleToggle('withdraw_status');
+                        }} 
+                    />
+                 </ControlRow>
 
                 <ControlRow active={settings.deposit_status}>
                     <div className="label-group">
                         <span>Deposit System</span>
                         <small>{settings.deposit_status ? "Active" : "Locked"}</small>
                     </div>
-                    <Switch active={settings.deposit_status} onClick={() => handleToggle('deposit_status')} />
-                </ControlRow>
+                      <Switch 
+                          type="button"
+                          active={settings.deposit_status} 
+                          onClick={(e) => {
+                              e.preventDefault();
+                              handleToggle('deposit_status');
+                          }} 
+                      />                
+                  </ControlRow>
             </div>
         </div>
       </Card>

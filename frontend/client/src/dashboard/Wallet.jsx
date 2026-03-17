@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wallet as WalletIcon, Lock, Copy, CreditCard, CheckCircle, QrCode } from "lucide-react";
+import { Wallet as WalletIcon, Lock, Copy, CreditCard, CheckCircle, QrCode,AlertCircle  } from "lucide-react";
 import api from "../api/axios";
 import CountUp from "react-countup";
 import toast from "react-hot-toast";
@@ -127,19 +127,28 @@ export default function Wallet() {
   const [amount, setAmount] = useState("");
   const [txnId, setTxnId] = useState(""); 
   const [loading, setLoading] = useState(false);
-
+  const [isDepositEnabled, setIsDepositEnabled] = useState(true); 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const [walletRes, methodsRes] = await Promise.all([
+      const [walletRes, methodsRes, statusRes] = await Promise.all([
         api.get("/wallet"),
-        api.get("/admin/payment-methods") 
+        api.get("/admin/payment-methods"),
+        api.get("/wallet/announcement")
       ]);
+
       setWallet(walletRes.data);
       setMethods(methodsRes.data);
+
+      // 🟢 Check if deposits are enabled by admin
+      if (statusRes.data && statusRes.data.deposit_status === false) {
+        setIsDepositEnabled(false);
+      } else {
+        setIsDepositEnabled(true);
+      }
     } catch (err) {
       console.error("Failed to fetch data", err);
     }
@@ -215,9 +224,32 @@ export default function Wallet() {
 
       <Footer>
         <Divider />
-        <Label>Add Funds</Label>
+        {/* 🟢 NEW: System Disabled Message */}
+        {!isDepositEnabled ? (
+          <div style={{
+            background: 'rgba(231, 76, 60, 0.1)', 
+            border: '1px solid rgba(231, 76, 60, 0.2)', 
+            padding: '15px', 
+            borderRadius: '12px', 
+            marginBottom: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            color: '#e74c3c',
+            fontSize: '13px'
+          }}>
+            <AlertCircle size={18} />
+            <span>Deposits are currently paused by the administrator.</span>
+          </div>
+        ) : (
+          <Label>Add Funds</Label>
+        )}
         
-        <Select value={selectedMethod} onChange={(e) => setSelectedMethod(e.target.value)}>
+        <Select 
+          value={selectedMethod} 
+          onChange={(e) => setSelectedMethod(e.target.value)}
+          disabled={!isDepositEnabled} // 🟢 Disable if system is OFF
+        >
           <option value="">-- Select Payment Method --</option>
           {methods.map(method => (
             <option key={method.id} value={method.method_name}>
@@ -274,19 +306,37 @@ export default function Wallet() {
           )}
         </div>
 
+        {!isDepositEnabled && (
+  <div style={{ 
+    color: '#ff4d4d', 
+    fontSize: '12px', 
+    textAlign: 'center', 
+    marginBottom: '10px',
+    fontWeight: '600' 
+  }}>
+    {/* * Deposits are currently paused by the admin. */}
+  </div>
+)}
+
         <Button 
-          onClick={handlePayment}
-          disabled={loading}
-          whileTap={{ scale: 0.95 }}
-          whileHover={{ opacity: 0.9 }}
-        >
-          {loading ? "Processing..." : (
-            <>
-              {isManual ? "Submit Request" : "Pay Now"} 
-              {isManual ? <CheckCircle size={18}/> : <CreditCard size={18}/>}
-            </>
-          )}
-        </Button>
+  onClick={handlePayment}
+  // 🟢 Disable if loading OR if the deposit system is closed
+  disabled={loading || !isDepositEnabled} 
+  whileTap={isDepositEnabled ? { scale: 0.95 } : {}}
+  style={{ 
+    // 🟢 Change color to grey when disabled
+    background: isDepositEnabled ? '#3ea6ff' : '#333',
+    cursor: isDepositEnabled ? 'pointer' : 'not-allowed'
+  }}
+>
+  {loading ? "Processing..." : (
+    <>
+      {/* 🟢 Change text based on system status */}
+      {isDepositEnabled ? (isManual ? "Submit Request" : "Pay Now") : "Deposits Closed"} 
+      {isDepositEnabled && (isManual ? <CheckCircle size={18}/> : <CreditCard size={18}/>)}
+    </>
+  )}
+</Button>
       </Footer>
     </Card>
   );
