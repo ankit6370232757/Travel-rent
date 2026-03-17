@@ -198,7 +198,7 @@ export default function AdminUsers({ users = [], onToggleStatus }) {
           <Table>
             <thead>
               <tr>
-                <th># SL</th>
+                <th>SL</th>
                 <th>UID</th>
                 <th>Full Name</th>
                 <th>Plain Password</th>
