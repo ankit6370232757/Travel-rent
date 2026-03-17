@@ -10,4 +10,6 @@ router.post(
 );
 router.get("/all", authMiddleware, bookingController.getAllBookings);
 
+router.get("/my-assets", authMiddleware, bookingController.getUserActivePackages);
+
 module.exports = router;
