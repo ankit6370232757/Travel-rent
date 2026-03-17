@@ -126,3 +126,14 @@ exports.getWithdrawalMethods = async(req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+
+exports.getSystemStatus = async (req, res) => {
+    try {
+        const result = await pool.query(
+            "SELECT withdraw_status, deposit_status, announcement_text, announcement_image FROM system_settings WHERE id = 1"
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching system status" });
+    }
+};
