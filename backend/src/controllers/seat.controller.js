@@ -75,7 +75,7 @@ exports.getSeatStatus = async(req, res) => {
 };
 
 // admin.controller.js
-exports.getPackagesWithStatus = async (req, res) => {
+exports.getAllPackagesWithStatus = async (req, res) => {
     try {
         const query = `
             SELECT 
