@@ -74,6 +74,37 @@ exports.getSeatStatus = async(req, res) => {
     }
 };
 
+// admin.controller.js
+exports.getPackagesWithStatus = async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                p.*, 
+                COALESCE(s.total_occupied, 0) as "filledSeats",
+                (COALESCE(s.total_occupied, 0) % p.total_seats) as "seatsInCurrentBatch",
+                FLOOR(COALESCE(s.total_occupied, 0) / p.total_seats) + 1 as "currentBatch",
+                (
+                    SELECT booked_at FROM seats 
+                    WHERE package_id = p.id AND status = 'OCCUPIED' 
+                    ORDER BY booked_at ASC 
+                    LIMIT 1 OFFSET (FLOOR(COALESCE(s.total_occupied, 0) / p.total_seats) * p.total_seats)
+                ) as "batchStartDate"
+            FROM packages p
+            LEFT JOIN (
+                SELECT package_id, COUNT(*) as total_occupied 
+                FROM seats WHERE status = 'OCCUPIED' 
+                GROUP BY package_id
+            ) s ON p.id = s.package_id
+            WHERE p.is_active = TRUE
+            ORDER BY p.ticket_price ASC;
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 
 
 
