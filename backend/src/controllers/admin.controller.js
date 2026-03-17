@@ -394,7 +394,7 @@ exports.getSettings = async(req, res) => {
 };
 
 // Update Global Settings
-exports.updateSettings = async(req, res) => {
+exports.updateSettings = async (req, res) => {
     try {
         const {
             upi_id,
@@ -404,7 +404,7 @@ exports.updateSettings = async(req, res) => {
             deposit_status,
             maintenance_mode,
             announcement_text,
-            announcement_image // 🟢 New field added here
+            announcement_image
         } = req.body;
 
         const query = `
@@ -416,21 +416,22 @@ exports.updateSettings = async(req, res) => {
                 deposit_status = $5, 
                 maintenance_mode = $6, 
                 announcement_text = $7,
-                announcement_image = $8, -- 🟢 Added column mapping
+                announcement_image = $8,
                 updated_at = NOW()
             WHERE id = 1
             RETURNING *;
         `;
 
         const values = [
-            upi_id,
-            min_withdraw,
-            withdraw_fee,
-            withdraw_status,
-            deposit_status,
-            maintenance_mode,
-            announcement_text,
-            announcement_image // 🟢 New value passed to query
+            upi_id || "",
+            min_withdraw || 0,
+            withdraw_fee || 0,
+            // 🟢 FORCE BOOLEAN TYPE
+            withdraw_status === true, 
+            deposit_status === true,
+            maintenance_mode === true,
+            announcement_text || "",
+            announcement_image || ""
         ];
 
         const result = await pool.query(query, values);
@@ -445,7 +446,7 @@ exports.updateSettings = async(req, res) => {
             data: result.rows[0]
         });
     } catch (err) {
-        console.error("Update Settings Error:", err);
+        console.error("Update Settings Error:", err.message);
         res.status(500).json({ message: "Failed to update settings" });
     }
 };
