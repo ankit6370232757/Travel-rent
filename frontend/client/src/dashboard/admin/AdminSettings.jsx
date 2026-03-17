@@ -129,7 +129,7 @@ export default function AdminSettings() {
     <Container initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       
       {/* 💳 FINANCIAL PARAMETERS */}
-      <Card>
+      {/* <Card>
         <div>
             <CardHeader><CreditCard size={18}/><h3>Financial Config</h3></CardHeader>
             <FormGroup style={{marginTop: 20}}>
@@ -150,7 +150,7 @@ export default function AdminSettings() {
                 </FormGroup>
             </div>
         </div>
-      </Card>
+      </Card> */}
 
       {/* 🔒 GATEWAY STATUS */}
       <Card>

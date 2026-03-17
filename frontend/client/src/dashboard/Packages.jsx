@@ -377,13 +377,13 @@ export default function Packages() {
 
           // --- FORMATTING LOGIC: CODE-DDMMYY-BATCH ---
           let slotDisplay = "...";
-          if (data && data.createdAt) {
-            const dbDate = new Date(data.createdAt);
-            const day = dbDate.getDate().toString().padStart(2, '0');
-            const month = (dbDate.getMonth() + 1).toString().padStart(2, '0');
-            const year = dbDate.getFullYear().toString().slice(-2);
-            const pkgCode = data.code || "PKG";
-            const batchId = data.currentBatch || "1";
+          if (data && data.batchStartDate) {
+            const dbDate = new Date(data.batchStartDate);
+    const day = dbDate.getDate().toString().padStart(2, '0');
+    const month = (dbDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = dbDate.getFullYear().toString().slice(-2);
+    const pkgCode = data.code || "PKG";
+    const batchId = data.currentBatch || "1";
             
             slotDisplay = `${pkgCode}${day}${month}${year}${batchId}`;
           }

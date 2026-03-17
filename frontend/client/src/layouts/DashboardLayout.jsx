@@ -24,6 +24,7 @@ import AdminPanel from "../dashboard/AdminPanel";
 import EarningHistory from "../dashboard/EarningHistory";
 import AdminRequests from "../dashboard/admin/AdminRequests"; // 👈 Yeh line add karo
 import AdminSupport from "../dashboard/admin/AdminSupport";
+import AdminPackageTracker from "../dashboard/admin/AdminPackageTracker"; // 🟢 Import the new component
 
 // --- ANIMATIONS ---
 const marquee = keyframes`
@@ -350,7 +351,9 @@ export default function DashboardLayout() {
                   onHandleAction={handleAdminAction} 
                   forceType="WITHDRAW" 
                 />
-              ) : activeTab === "admin-queries" ? ( <AdminSupport /> ) : 
+              ) : activeTab === "admin-queries" ? ( <AdminSupport /> )
+               : activeTab === "admin-tracker" ? ( <AdminPackageTracker /> )
+               :
               ( <AdminPanel initialView={activeTab.replace("admin-", "")} /> )
             ) : (
               activeTab === "wallet" ? <Wallet /> :

@@ -5,7 +5,7 @@ import {
   Home, Wallet, Users, LogOut, Box, X, CreditCard,
   History as HistoryIcon, Settings as SettingsIcon,
   BarChart2, FileText, UserCheck, Sliders, Package,
-  Banknote, TrendingUp, ChevronDown, ArrowDownLeft, ArrowUpRight
+  Banknote, TrendingUp,PieChart, ChevronDown, ArrowDownLeft, ArrowUpRight
 } from "lucide-react";
 
 const Container = styled(motion.div)`
@@ -51,6 +51,7 @@ const UserMeta = styled.div` display: flex; flex-direction: column; strong { fon
 export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose, pendingCount }) {
   const isAdmin = user && user.role === 'admin';
   const [requestOpen, setRequestOpen] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(false);
 
   const handleNav = (id) => {
     setActiveTab(id);
@@ -119,9 +120,37 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                   <Sliders size={18} /> System Settings
                 </MenuItem>
 
-                <MenuItem $isAdmin $active={activeTab === "admin-packages"} onClick={() => handleNav("admin-packages")}>
+
+
+                <MenuItem 
+                  $isAdmin 
+                  $active={activeTab === "admin-packages" || activeTab === "admin-tracker"} 
+                  onClick={() => setPlansOpen(!plansOpen)}
+                >
                   <Package size={18} /> Manage Plans
+                  <div style={{ marginLeft: 'auto', transform: plansOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s', display: 'flex' }}>
+                    <ChevronDown size={16} />
+                  </div>
                 </MenuItem>
+
+                <AnimatePresence>
+                  {plansOpen && (
+                    <SubMenuContainer 
+                      initial={{ height: 0, opacity: 0 }} 
+                      animate={{ height: 'auto', opacity: 1 }} 
+                      exit={{ height: 0, opacity: 0 }}
+                    >
+                      <SubMenuItem $active={activeTab === "admin-packages"} onClick={() => handleNav("admin-packages")}>
+                        <Sliders size={14} /> Configure Packages
+                      </SubMenuItem>
+                      <SubMenuItem $active={activeTab === "admin-tracker"} onClick={() => handleNav("admin-tracker")}>
+                        <PieChart size={14} /> Package Tracker
+                      </SubMenuItem>
+                    </SubMenuContainer>
+                  )}
+                </AnimatePresence>
+
+
 
                 <MenuItem $isAdmin $active={activeTab === "admin-finance"} onClick={() => handleNav("admin-finance")}>
                   <Banknote size={18} /> Finance Log
