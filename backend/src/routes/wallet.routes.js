@@ -4,6 +4,7 @@ const authMiddleware = require("../middleware/auth.middleware");
 const walletController = require("../controllers/wallet.controller");
 
 router.get("/", authMiddleware, walletController.getWallet);
+router.get("/announcement", walletController.getSystemStatus);
 router.post("/withdraw", authMiddleware, walletController.withdraw);
 router.get("/withdrawals", authMiddleware, walletController.withdrawHistory);
 
