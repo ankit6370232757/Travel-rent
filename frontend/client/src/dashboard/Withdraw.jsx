@@ -100,7 +100,8 @@ export default function Withdraw() {
   const [view, setView] = useState("withdraw"); 
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
-  
+  const [isSystemEnabled, setIsSystemEnabled] = useState(true); // 🟢 NEW STATE
+
   const [balance, setBalance] = useState(0);
   const [accounts, setAccounts] = useState([]);
   const [adminMethods, setAdminMethods] = useState([]); 
@@ -116,15 +117,24 @@ export default function Withdraw() {
   const fetchData = async () => {
     try {
       // ✅ Using /api/wallet prefix as per your app.js
-      const [balRes, accRes, methodRes] = await Promise.all([
+      const [balRes, accRes, methodRes, statusRes] = await Promise.all([
         api.get("/wallet"),
         api.get("/wallet/withdrawal-accounts"),
-        api.get("/wallet/withdrawal-methods-list") 
+        api.get("/wallet/withdrawal-methods-list"),
+        api.get("/wallet/announcement")
       ]);
 
       setBalance(Number(balRes.data.balance));
       setAccounts(accRes.data);
       setAdminMethods(methodRes.data);
+
+      // 🟢 Check if withdrawals are enabled by admin
+      if (statusRes.data && statusRes.data.withdraw_status === false) {
+        setIsSystemEnabled(false);
+      } else {
+        setIsSystemEnabled(true);
+      }
+
     } catch (err) { 
       console.error("Fetch Error:", err);
     }
@@ -195,6 +205,14 @@ export default function Withdraw() {
         <Title>{view === 'withdraw' ? "Withdraw Funds" : "Add Withdrawal Method"}</Title>
       </Header>
 
+      {/* 🟢 NEW: System Disabled Message */}
+      {!isSystemEnabled && view === 'withdraw' && (
+        <StatusMessage error style={{marginBottom: 25}}>
+          <AlertCircle size={20} />
+          <strong>Withdrawals are currently paused by the administrator.</strong>
+        </StatusMessage>
+      )}
+
       <AnimatePresence mode="wait">
         {view === "withdraw" ? (
           <motion.div key="withdraw" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -232,9 +250,9 @@ export default function Withdraw() {
               />
             </InputWrapper>
 
-            <Button onClick={submitWithdraw} disabled={loading || accounts.length === 0}>
-              {loading ? "Processing..." : "Withdraw Now"}
-              {!loading && <ArrowRight size={20} />}
+            <Button onClick={submitWithdraw} disabled={loading || accounts.length === 0 || !isSystemEnabled}>
+            {loading ? "Processing..." : isSystemEnabled ? "Withdraw Now" : "System Offline"}
+            {!loading && <ArrowRight size={20} />}
             </Button>
           </motion.div>
         ) : (
