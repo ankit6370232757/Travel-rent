@@ -74,43 +74,6 @@ exports.getSeatStatus = async(req, res) => {
     }
 };
 
-exports.getAllPackagesWithStatus = async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                p.id, p.name, p.ticket_price, p.daily_income, p.monthly_income, 
-                p.yearly_income, p.ots_income, p.total_seats, p.code, p.created_at, p.description,
-                COALESCE(s.total_occupied, 0) as "filledSeats",
-                (COALESCE(s.total_occupied, 0) % p.total_seats) as "seatsInCurrentBatch",
-                FLOOR(COALESCE(s.total_occupied, 0) / p.total_seats) + 1 as "currentBatch",
-                -- Fallback to created_at if no seats are booked yet
-                COALESCE(s.first_booking, p.created_at) as "batchStartDate"
-            FROM packages p
-            LEFT JOIN (
-                SELECT 
-                    package_id, 
-                    COUNT(*) as total_occupied,
-                    MIN(booked_at) as first_booking
-                FROM seats 
-                WHERE status = 'OCCUPIED' 
-                GROUP BY package_id
-            ) s ON p.id = s.package_id
-            WHERE p.is_active = TRUE
-            ORDER BY p.ticket_price ASC;
-        `;
-        
-        const result = await pool.query(query);
-        res.json(result.rows);
-    } catch (err) {
-        console.error("GET ALL STATUS ERROR:", err.message);
-        res.status(500).json({ message: "Database Error", error: err.message });
-    }
-};
-
-
-
-
-
 
 
 
