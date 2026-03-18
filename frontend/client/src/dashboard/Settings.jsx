@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
-import { User, Mail, Lock, Save, Shield, CreditCard, Share2, Copy, Check, Headphones, Send } from "lucide-react";
+import { 
+  User, Mail, Lock, Save, Shield, CreditCard, Share2, 
+  Copy, Check, Headphones, Send, Hash, MessageCircle 
+} from "lucide-react";
 import api from "../api/axios";
 
 // --- STYLED COMPONENTS ---
@@ -12,7 +15,7 @@ const Card = styled(motion.div)`
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
   padding: 40px;
-  max-width: 800px; /* Slightly wider for better spacing */
+  max-width: 800px;
   margin: 0 auto 40px auto; 
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 `;
@@ -178,6 +181,31 @@ const ShareBox = styled.div`
   p { margin: 8px 0 0; font-size: 13px; color: #bbb; line-height: 1.5; }
 `;
 
+const ShareButtonsRow = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+`;
+
+const ActionButton = styled(motion.button)`
+  background: ${(props) => props.bg || "rgba(255, 255, 255, 0.1)"};
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 20px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  &:hover { opacity: 0.8; transform: translateY(-2px); }
+`;
+
 const SupportBox = styled.div`
   margin-top: 50px;
   padding-top: 30px;
@@ -194,6 +222,7 @@ const Grid = styled.div`
 
 export default function Settings() {
   const [form, setForm] = useState({ 
+    userId: "", 
     name: "", 
     email: "", 
     password: "", 
@@ -206,12 +235,14 @@ export default function Settings() {
   const [supportLoading, setSupportLoading] = useState(false);
   const [copied, setCopied] = useState(""); 
   const [tickets, setTickets] = useState([]);
+
   useEffect(() => {
     // 1. Load from LocalStorage
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (storedUser) {
         setForm(prev => ({ 
             ...prev,
+            userId: storedUser.id || storedUser.userId || "Loading...", 
             name: storedUser.name || "", 
             email: storedUser.email || "", 
             wallet_address: storedUser.wallet_address || "",
@@ -225,6 +256,7 @@ export default function Settings() {
         const freshUser = res.data;
         setForm(prev => ({
             ...prev,
+            userId: freshUser.id || freshUser.userId || "N/A", 
             name: freshUser.name,
             email: freshUser.email,
             wallet_address: freshUser.wallet_address || "",
@@ -234,14 +266,17 @@ export default function Settings() {
       })
       .catch(err => console.error("Failed to fetch profile:", err));
 
-      // --- Add this useEffect to fetch tickets ---
+      // 3. Fetch tickets
       api.get("/support/my-tickets").then(res => setTickets(res.data));
   }, []);
 
   const handleUpdate = async () => {
     setLoading(true);
     try {
-      const res = await api.put("/auth/update-profile", form);
+      // 🔒 Exclude email and userId from the payload sent to the backend
+      const { email, userId, ...payloadToUpdate } = form;
+      
+      const res = await api.put("/auth/update-profile", payloadToUpdate);
       const currentUser = JSON.parse(localStorage.getItem("user"));
       const updatedUser = { ...currentUser, ...res.data.user };
       localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -275,6 +310,31 @@ export default function Settings() {
   };
 
   const referralLink = `${window.location.origin}/register?ref=${form.referral_code}`;
+  const shareMessage = `Join TravelRent today! Sign up using my referral link and let's earn rewards together: ${referralLink}`;
+
+  // WhatsApp Share Handler
+  const shareViaWhatsApp = () => {
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
+  // Native Mobile/Browser Share Handler
+  const nativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join TravelRent",
+          text: "Sign up using my referral link!",
+          url: referralLink,
+        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      copyToClipboard(referralLink, "link");
+      alert("Link copied! Paste it in your favorite social media app.");
+    }
+  };
 
   return (
     <Card initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
@@ -291,6 +351,15 @@ export default function Settings() {
       {/* --- PERSONAL DETAILS --- */}
       <SectionTitle><User size={16}/> Personal Details</SectionTitle>
       <Grid>
+        {/* 🔒 DISABLED USER ID FIELD */}
+        <FormGroup>
+            <label>User ID</label>
+            <InputWrapper>
+            <Hash size={18} />
+            <Input value={form.userId} disabled /> 
+            </InputWrapper>
+        </FormGroup>
+
         <FormGroup>
             <label>Full Name</label>
             <InputWrapper>
@@ -299,11 +368,12 @@ export default function Settings() {
             </InputWrapper>
         </FormGroup>
 
+        {/* 🔒 DISABLED EMAIL FIELD */}
         <FormGroup>
             <label>Email Address</label>
             <InputWrapper>
             <Mail size={18} />
-            <Input value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} />
+            <Input value={form.email} disabled /> 
             </InputWrapper>
         </FormGroup>
       </Grid>
@@ -347,6 +417,18 @@ export default function Settings() {
       <ShareBox>
         <h4>🚀 Invite Friends & Earn!</h4>
         <p>Share your link above. When friends register using your link, you earn rewards.</p>
+        
+        {/* NEW SOCIAL SHARE BUTTONS */}
+        <ShareButtonsRow>
+          <ActionButton bg="#25D366" onClick={shareViaWhatsApp}>
+            <MessageCircle size={18} color="#fff" /> WhatsApp
+          </ActionButton>
+          
+          <ActionButton bg="rgba(62,166,255,0.2)" onClick={nativeShare}>
+            <Share2 size={18} color="#3ea6ff" /> Share via...
+          </ActionButton>
+        </ShareButtonsRow>
+
       </ShareBox>
 
       {/* --- SECURITY --- */}
@@ -398,33 +480,31 @@ export default function Settings() {
             {!supportLoading && <Send size={16} />}
         </Button>
 
-    <div style={{ marginTop: '40px' }}>
-    <SectionTitle><Mail size={16}/> My Support Tickets</SectionTitle>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        {tickets.length === 0 ? (
-            <p style={{color: '#666', textAlign: 'center'}}>No tickets found.</p>
-        ) : (
-            tickets.map(ticket => (
-                <div key={ticket.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <strong style={{ color: '#3ea6ff' }}>{ticket.subject}</strong>
-                        <span style={{ fontSize: '12px', color: ticket.status === 'OPEN' ? '#f1c40f' : '#2ecc71' }}>{ticket.status}</span>
-                    </div>
-                    <p style={{ color: '#ccc', fontSize: '14px', margin: '5px 0' }}>Q: {ticket.message}</p>
-                    
-                    {ticket.admin_reply && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(62,166,255,0.1)', borderRadius: '10px', borderLeft: '3px solid #3ea6ff' }}>
-                            <p style={{ color: '#fff', fontSize: '13px', margin: 0 }}><strong>Admin Reply:</strong> {ticket.admin_reply}</p>
-                        </div>
-                    )}
-                </div>
-            ))
-        )}
-    </div>
-</div>
-
+        <div style={{ marginTop: '40px' }}>
+          <SectionTitle><Mail size={16}/> My Support Tickets</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {tickets.length === 0 ? (
+                  <p style={{color: '#666', textAlign: 'center'}}>No tickets found.</p>
+              ) : (
+                  tickets.map(ticket => (
+                      <div key={ticket.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                              <strong style={{ color: '#3ea6ff' }}>{ticket.subject}</strong>
+                              <span style={{ fontSize: '12px', color: ticket.status === 'OPEN' ? '#f1c40f' : '#2ecc71' }}>{ticket.status}</span>
+                          </div>
+                          <p style={{ color: '#ccc', fontSize: '14px', margin: '5px 0' }}>Q: {ticket.message}</p>
+                          
+                          {ticket.admin_reply && (
+                              <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(62,166,255,0.1)', borderRadius: '10px', borderLeft: '3px solid #3ea6ff' }}>
+                                  <p style={{ color: '#fff', fontSize: '13px', margin: 0 }}><strong>Admin Reply:</strong> {ticket.admin_reply}</p>
+                              </div>
+                          )}
+                      </div>
+                  ))
+              )}
+          </div>
+        </div>
       </SupportBox>
-
     </Card>
   );
 }

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom"; // Added useSearchParams
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, Mail, Lock, Tag, UserPlus, CheckCircle, 
@@ -110,12 +110,28 @@ const IdDisplay = styled.div`
 `;
 
 export default function Register() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", referralCode: "" });
+  const [searchParams] = useSearchParams();
+  const refCodeFromUrl = searchParams.get("ref") || ""; // Extracted from URL
+
+  const [form, setForm] = useState({ 
+    name: "", 
+    email: "", 
+    password: "", 
+    referralCode: refCodeFromUrl // Auto-fills if available
+  });
+  
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const navigate = useNavigate();
+
+  // Ensure the state updates if the URL changes while on the page
+  useEffect(() => {
+    if (refCodeFromUrl) {
+      setForm((prev) => ({ ...prev, referralCode: refCodeFromUrl }));
+    }
+  }, [refCodeFromUrl]);
 
   const triggerBlossom = () => {
     const end = Date.now() + 3 * 1000;
@@ -128,14 +144,8 @@ export default function Register() {
   };
 
   const submit = async () => {
-    // 1. Check basic required fields first
-    if (!form.name || !form.email || !form.password || !phone) {
-      return toast.error("Please fill in all required fields");
-    }
-
-    // 2. Add specific check for the referral code
-    if (!form.referralCode || form.referralCode.trim() === "") {
-      return toast.error("Referral code is needed to register");
+    if (!form.name || !form.email || !form.password || !phone || !form.referralCode) {
+      return toast.error("Please fill in all required fields (including Referral Code)");
     }
     
     setLoading(true);
@@ -198,7 +208,12 @@ export default function Register() {
         </InputGroup>
 
         <InputGroup>
-          <Input placeholder="Referral Code" value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value })} />
+          <Input 
+            placeholder="Referral Code" 
+            value={form.referralCode} 
+            onChange={e => setForm({ ...form, referralCode: e.target.value })} 
+            readOnly={!!refCodeFromUrl} // Disables typing if fetched from URL to prevent accidental overrides (Optional: remove this if you want them to be able to edit it)
+          />
           <IconWrapper><Tag size={18} /></IconWrapper>
         </InputGroup>
         
