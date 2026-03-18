@@ -240,8 +240,13 @@ export default function AdminUsers({ users = [], onToggleStatus }) {
                     </Badge>
                   </td>
                   <td style={{ color: '#fff', fontWeight: 'bold' }}>${Number(u.balance || 0).toFixed(2)}</td>
-                  <td style={{ fontSize: '12px', color: '#666' }}>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td>
+<td style={{ fontSize: '12px', color: '#666' }}>
+  {new Date(u.created_at).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit'
+  })}
+</td>                  <td>
                     <ActionBtn $active={u.is_active === false} onClick={() => onToggleStatus(u.id, u.is_active !== false)}>
                       {u.is_active !== false ? <><UserX size={14}/> Disable</> : <><UserCheck size={14}/> Enable</>}
                     </ActionBtn>
