@@ -20,7 +20,7 @@ const app = express(); // ✅ app must be created FIRST
 app.use(cors({
     origin: true, // 🚀 Allows your Vercel frontend to connect dynamically
     credentials: true, // 🔑 REQUIRED because your axios has 'withCredentials: true'
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json());
