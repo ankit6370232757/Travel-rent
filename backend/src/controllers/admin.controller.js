@@ -361,9 +361,12 @@ exports.toggleUserStatus = async(req, res) => {
         const { id } = req.params;
         const { is_active } = req.body; // Expecting the new boolean status
 
+        const newStatus = is_active === true;
+
         // Update the user's status in the users table
         const result = await pool.query(
-            "UPDATE users SET is_active = $1 WHERE id = $2 RETURNING id, name, is_active", [is_active, id]
+            "UPDATE users SET is_active = $1 WHERE id = $2 RETURNING id, name, is_active", 
+            [newStatus, id]
         );
 
         if (result.rows.length === 0) {

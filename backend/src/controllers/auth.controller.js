@@ -104,7 +104,7 @@ exports.login = async(req, res) => {
         const user = userRes.rows[0];
 
         // 2. Security Check: Block deactivated users
-        if (!user.is_active) {
+        if (user.is_active === false) {
             return res.status(403).json({
                 message: "Your account has been deactivated. Please contact support."
             });
