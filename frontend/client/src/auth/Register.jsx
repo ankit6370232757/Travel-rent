@@ -2,10 +2,13 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, Tag, UserPlus, CheckCircle, Copy, X } from "lucide-react";
+import { 
+  User, Mail, Lock, Tag, UserPlus, CheckCircle, 
+  Eye, EyeOff, X, ArrowRight 
+} from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
-import confetti from "canvas-confetti"; // 👈 npm install canvas-confetti
+import confetti from "canvas-confetti";
 
 // Phone Input
 import PhoneInput from "react-phone-input-2";
@@ -34,7 +37,7 @@ const GlassCard = styled(motion.div)`
 `;
 
 const Header = styled.div` text-align: center; margin-bottom: 5px; `;
-const Logo = styled.h1` font-size: 32px; font-weight: 800; margin: 0 0 5px 0; color: #fff; letter-spacing: -1px; span { color: #2ecc71; } `;
+const Logo = styled.h1` font-size: 32px; font-weight: 800; margin: 0 0 10px 0; color: #fff; letter-spacing: -1px; span { color: #2ecc71; } `;
 const Subtitle = styled.p` color: #888; font-size: 14px; margin: 0; `;
 
 const InputGroup = styled.div` position: relative; width: 100%; `;
@@ -43,10 +46,17 @@ const IconWrapper = styled.div`
   color: #666; display: flex; align-items: center; pointer-events: none; z-index: 10;
 `;
 
+const EyeWrapper = styled.div`
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  color: #666; display: flex; align-items: center; cursor: pointer;
+  z-index: 11; transition: color 0.2s;
+  &:hover { color: #2ecc71; }
+`;
+
 const Input = styled.input`
   width: 100%; background-color: rgba(0, 0, 0, 0.3); 
   border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; 
-  padding: 14px 14px 14px 50px; color: #fff; font-size: 15px; outline: none; 
+  padding: 14px 45px 14px 50px; color: #fff; font-size: 15px; outline: none; 
   transition: all 0.2s; box-sizing: border-box;
   &::placeholder { color: #555; }
   &:focus { border-color: #2ecc71; background-color: rgba(0, 0, 0, 0.5); }
@@ -82,7 +92,6 @@ const Footer = styled.div`
   a { color: #2ecc71; text-decoration: none; font-weight: 600; margin-left: 5px; } 
 `;
 
-// 🌸 SUCCESS MODAL STYLES
 const ModalOverlay = styled(motion.div)`
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
@@ -103,11 +112,11 @@ const IdDisplay = styled.div`
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "", referralCode: "" });
   const [phone, setPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // 🟢 State for password toggle
   const [loading, setLoading] = useState(false);
-  const [successData, setSuccessData] = useState(null); // 🟢 Store 6-digit ID
+  const [successData, setSuccessData] = useState(null);
   const navigate = useNavigate();
 
-  // 🌸 Flower Blossom Celebration
   const triggerBlossom = () => {
     const end = Date.now() + 3 * 1000;
     const colors = ["#2ecc71", "#ffffff", "#27ae60"];
@@ -127,10 +136,10 @@ export default function Register() {
 
     try {
       const payload = { ...form, phoneNumber: phone };
-      const res = await api.post("/auth/register", payload); // 🟢 Backend now returns userId
+      const res = await api.post("/auth/register", payload);
       
       toast.success("Account Created Successfully!", { id: loadingToast });
-      setSuccessData(res.data.userId); // Save 6-digit ID to show in modal
+      setSuccessData(res.data.userId); 
       triggerBlossom();
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Registration failed";
@@ -169,8 +178,16 @@ export default function Register() {
         </InputGroup>
 
         <InputGroup>
-          <Input type="password" placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          <Input 
+            type={showPassword ? "text" : "password"} 
+            placeholder="Password" 
+            value={form.password} 
+            onChange={e => setForm({ ...form, password: e.target.value })} 
+          />
           <IconWrapper><Lock size={18} /></IconWrapper>
+          <EyeWrapper onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </EyeWrapper>
         </InputGroup>
 
         <InputGroup>
@@ -186,7 +203,7 @@ export default function Register() {
         <Footer>Already joined? <Link to="/login">Login Here</Link></Footer>
       </GlassCard>
 
-      {/* 🌸 SUCCESS MODAL FOR 6-DIGIT ID */}
+      {/* SUCCESS MODAL */}
       <AnimatePresence>
         {successData && (
           <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -198,7 +215,7 @@ export default function Register() {
               <IdDisplay>{successData}</IdDisplay>
               
               <Button onClick={() => navigate("/login")} style={{ width: '100%' }}>
-                Continue to Login <X size={16} />
+                Continue to Login <ArrowRight size={18} />
               </Button>
             </ModalContent>
           </ModalOverlay>

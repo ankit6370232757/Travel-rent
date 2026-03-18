@@ -33,6 +33,7 @@ const Grid = styled(motion.div)`
 `;
 
 const Card = styled(motion.div)`
+  max-width: 400px;
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.05);

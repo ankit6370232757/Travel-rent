@@ -59,6 +59,7 @@ const AssetGrid = styled.div`
 `;
 
 const AssetCard = styled.div`
+  max-width: 400px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px; padding: 25px;
