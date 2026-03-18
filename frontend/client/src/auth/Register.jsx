@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, Mail, Lock, Tag, UserPlus, CheckCircle, 
-  Eye, EyeOff, X, ArrowRight 
+  Eye, EyeOff, ArrowRight 
 } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -112,7 +112,7 @@ const IdDisplay = styled.div`
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "", referralCode: "" });
   const [phone, setPhone] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // 🟢 State for password toggle
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const navigate = useNavigate();
@@ -128,9 +128,16 @@ export default function Register() {
   };
 
   const submit = async () => {
+    // 1. Check basic required fields first
     if (!form.name || !form.email || !form.password || !phone) {
       return toast.error("Please fill in all required fields");
     }
+
+    // 2. Add specific check for the referral code
+    if (!form.referralCode || form.referralCode.trim() === "") {
+      return toast.error("Referral code is needed to register");
+    }
+    
     setLoading(true);
     const loadingToast = toast.loading("Creating your account...");
 
@@ -191,7 +198,7 @@ export default function Register() {
         </InputGroup>
 
         <InputGroup>
-          <Input placeholder="Referral Code (Optional)" value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value })} />
+          <Input placeholder="Referral Code" value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value })} />
           <IconWrapper><Tag size={18} /></IconWrapper>
         </InputGroup>
         
