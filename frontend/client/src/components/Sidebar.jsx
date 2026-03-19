@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Home, Wallet, Users, LogOut, Box, X, CreditCard,
   History as HistoryIcon, Settings as SettingsIcon,
-  BarChart2, FileText, UserCheck, Sliders, Package, ShieldCheck,
+  BarChart2, FileText, UserCheck, Sliders, Package, ShieldCheck, Share2 ,
   Banknote, TrendingUp,PieChart, ChevronDown, ArrowDownLeft, ArrowUpRight
 } from "lucide-react";
 
@@ -193,6 +193,9 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
                 <MenuItem $active={activeTab === "network"} onClick={() => handleNav("network")}>
                   <Users size={18} /> My Network
                 </MenuItem>
+                <MenuItem $active={activeTab === "invite"} onClick={() => handleNav("invite")}>
+  <Share2 size={18} /> Invite & Earn
+</MenuItem>
                 <MenuItem $active={activeTab === "earning-history"} onClick={() => handleNav("earning-history")}>
                   <TrendingUp size={18} /> Earning History
                 </MenuItem>

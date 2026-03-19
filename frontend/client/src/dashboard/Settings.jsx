@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { 
-  User, Mail, Lock, Save, Shield, CreditCard, Share2, 
-  Copy, Check, Headphones, Send, Hash, MessageCircle 
+  User, Mail, Lock, Save, CreditCard, 
+  Headphones, Send, Hash 
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -152,60 +152,6 @@ const Button = styled(motion.button)`
   &:disabled { opacity: 0.7; cursor: not-allowed; }
 `;
 
-const CopyButton = styled.button`
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  color: #ccc;
-  transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center;
-
-  &:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
-`;
-
-const ShareBox = styled.div`
-  background: linear-gradient(135deg, rgba(62, 166, 255, 0.1) 0%, rgba(62, 166, 255, 0.05) 100%);
-  border: 1px solid rgba(62, 166, 255, 0.2);
-  border-radius: 16px;
-  padding: 25px;
-  margin-top: 30px;
-  text-align: center;
-
-  h4 { margin: 0; color: #fff; font-size: 16px; }
-  p { margin: 8px 0 0; font-size: 13px; color: #bbb; line-height: 1.5; }
-`;
-
-const ShareButtonsRow = styled.div`
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-`;
-
-const ActionButton = styled(motion.button)`
-  background: ${(props) => props.bg || "rgba(255, 255, 255, 0.1)"};
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 10px 20px;
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-
-  &:hover { opacity: 0.8; transform: translateY(-2px); }
-`;
-
 const SupportBox = styled.div`
   margin-top: 50px;
   padding-top: 30px;
@@ -226,18 +172,15 @@ export default function Settings() {
     name: "", 
     email: "", 
     password: "", 
-    wallet_address: "",
-    referral_code: "" 
+    wallet_address: ""
   });
   
   const [support, setSupport] = useState({ subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
-  const [copied, setCopied] = useState(""); 
   const [tickets, setTickets] = useState([]);
 
   useEffect(() => {
-    // 1. Load from LocalStorage
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (storedUser) {
         setForm(prev => ({ 
@@ -245,12 +188,10 @@ export default function Settings() {
             userId: storedUser.id || storedUser.userId || "Loading...", 
             name: storedUser.name || "", 
             email: storedUser.email || "", 
-            wallet_address: storedUser.wallet_address || "",
-            referral_code: storedUser.referral_code || "Loading..."
+            wallet_address: storedUser.wallet_address || ""
         }));
     }
 
-    // 2. Fetch FRESH Data
     api.get("/auth/profile")
       .then(res => {
         const freshUser = res.data;
@@ -259,23 +200,19 @@ export default function Settings() {
             userId: freshUser.id || freshUser.userId || "N/A", 
             name: freshUser.name,
             email: freshUser.email,
-            wallet_address: freshUser.wallet_address || "",
-            referral_code: freshUser.referral_code || "N/A"
+            wallet_address: freshUser.wallet_address || ""
         }));
         localStorage.setItem("user", JSON.stringify({ ...storedUser, ...freshUser }));
       })
       .catch(err => console.error("Failed to fetch profile:", err));
 
-      // 3. Fetch tickets
       api.get("/support/my-tickets").then(res => setTickets(res.data));
   }, []);
 
   const handleUpdate = async () => {
     setLoading(true);
     try {
-      // 🔒 Exclude email and userId from the payload sent to the backend
       const { email, userId, ...payloadToUpdate } = form;
-      
       const res = await api.put("/auth/update-profile", payloadToUpdate);
       const currentUser = JSON.parse(localStorage.getItem("user"));
       const updatedUser = { ...currentUser, ...res.data.user };
@@ -294,45 +231,15 @@ export default function Settings() {
     setSupportLoading(true);
     try {
         await api.post("/support/create", support);
-        alert("✅ Support ticket submitted! We will contact you soon.");
-        setSupport({ subject: "", message: "" }); // Clear form
+        alert("✅ Support ticket submitted!");
+        setSupport({ subject: "", message: "" });
+        // Refresh tickets
+        const res = await api.get("/support/my-tickets");
+        setTickets(res.data);
     } catch (err) {
         alert("Failed to send message.");
     } finally {
         setSupportLoading(false);
-    }
-  };
-
-  const copyToClipboard = (text, type) => {
-    navigator.clipboard.writeText(text);
-    setCopied(type);
-    setTimeout(() => setCopied(""), 2000);
-  };
-
-  const referralLink = `${window.location.origin}/register?ref=${form.referral_code}`;
-  const shareMessage = `Join TravelRent today! Sign up using my referral link and let's earn rewards together: ${referralLink}`;
-
-  // WhatsApp Share Handler
-  const shareViaWhatsApp = () => {
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
-  // Native Mobile/Browser Share Handler
-  const nativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Join TravelRent",
-          text: "Sign up using my referral link!",
-          url: referralLink,
-        });
-      } catch (err) {
-        console.error("Error sharing:", err);
-      }
-    } else {
-      copyToClipboard(referralLink, "link");
-      alert("Link copied! Paste it in your favorite social media app.");
     }
   };
 
@@ -348,10 +255,8 @@ export default function Settings() {
         </div>
       </Header>
 
-      {/* --- PERSONAL DETAILS --- */}
       <SectionTitle><User size={16}/> Personal Details</SectionTitle>
       <Grid>
-        {/* 🔒 DISABLED USER ID FIELD */}
         <FormGroup>
             <label>User ID</label>
             <InputWrapper>
@@ -368,7 +273,6 @@ export default function Settings() {
             </InputWrapper>
         </FormGroup>
 
-        {/* 🔒 DISABLED EMAIL FIELD */}
         <FormGroup>
             <label>Email Address</label>
             <InputWrapper>
@@ -378,7 +282,6 @@ export default function Settings() {
         </FormGroup>
       </Grid>
 
-      {/* --- PAYMENT SETTINGS --- */}
       <SectionTitle><CreditCard size={16}/> Withdrawal Settings</SectionTitle>
       <FormGroup>
         <label>USDT (TRC20) Wallet Address</label>
@@ -388,50 +291,6 @@ export default function Settings() {
         </InputWrapper>
       </FormGroup>
 
-      {/* --- REFERRAL & SHARE --- */}
-      <SectionTitle><Share2 size={16}/> Referral & Sharing</SectionTitle>
-      <Grid>
-         <FormGroup>
-            <label>My Referral Code</label>
-            <InputWrapper>
-            <Shield size={18} />
-            <Input value={form.referral_code} disabled />
-            <CopyButton onClick={() => copyToClipboard(form.referral_code, "code")}>
-                {copied === "code" ? <Check size={16} color="#2ecc71"/> : <Copy size={16}/>}
-            </CopyButton>
-            </InputWrapper>
-        </FormGroup>
-
-        <FormGroup>
-            <label>My Invite Link</label>
-            <InputWrapper>
-            <Share2 size={18} />
-            <Input value={referralLink} disabled />
-            <CopyButton onClick={() => copyToClipboard(referralLink, "link")}>
-                {copied === "link" ? <Check size={16} color="#2ecc71"/> : <Copy size={16}/>}
-            </CopyButton>
-            </InputWrapper>
-        </FormGroup>
-      </Grid>
-      
-      <ShareBox>
-        <h4>🚀 Invite Friends & Earn!</h4>
-        <p>Share your link above. When friends register using your link, you earn rewards.</p>
-        
-        {/* NEW SOCIAL SHARE BUTTONS */}
-        <ShareButtonsRow>
-          <ActionButton bg="#25D366" onClick={shareViaWhatsApp}>
-            <MessageCircle size={18} color="#fff" /> WhatsApp
-          </ActionButton>
-          
-          <ActionButton bg="rgba(62,166,255,0.2)" onClick={nativeShare}>
-            <Share2 size={18} color="#3ea6ff" /> Share via...
-          </ActionButton>
-        </ShareButtonsRow>
-
-      </ShareBox>
-
-      {/* --- SECURITY --- */}
       <SectionTitle><Lock size={16}/> Security</SectionTitle>
       <FormGroup>
         <label>New Password (Optional)</label>
@@ -446,11 +305,10 @@ export default function Settings() {
         {!loading && <Save size={18} />}
       </Button>
 
-      {/* --- HELP & SUPPORT SECTION --- */}
       <SupportBox>
         <SectionTitle><Headphones size={16}/> Help & Support</SectionTitle>
         <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '25px', lineHeight: 1.6 }}>
-            Have an issue? Send us a message below or email us directly at <a href="mailto:support@travelrent.com" style={{color: '#3ea6ff', textDecoration: 'none', fontWeight: 600}}>support@travelrent.com</a>.
+            Have an issue? Send us a message below or email us at <a href="mailto:support@travelrent.com" style={{color: '#3ea6ff', textDecoration: 'none', fontWeight: 600}}>support@travelrent.com</a>.
         </p>
 
         <FormGroup>
@@ -493,7 +351,6 @@ export default function Settings() {
                               <span style={{ fontSize: '12px', color: ticket.status === 'OPEN' ? '#f1c40f' : '#2ecc71' }}>{ticket.status}</span>
                           </div>
                           <p style={{ color: '#ccc', fontSize: '14px', margin: '5px 0' }}>Q: {ticket.message}</p>
-                          
                           {ticket.admin_reply && (
                               <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(62,166,255,0.1)', borderRadius: '10px', borderLeft: '3px solid #3ea6ff' }}>
                                   <p style={{ color: '#fff', fontSize: '13px', margin: 0 }}><strong>Admin Reply:</strong> {ticket.admin_reply}</p>
