@@ -18,7 +18,11 @@ const publicRoutes = require("./routes/public.routes");
 const app = express(); // ✅ app must be created FIRST
 
 app.use(cors({
-    origin: ["https://travel-rent-client.vercel.app"], // Specify your exact URL    
+    origin: ["https://travel-rent-client.vercel.app",
+        "http://localhost:5173",               // Vite default
+        "http://localhost:3000",               // Create React App default
+        "http://127.0.0.1:5173"
+    ], // Specify your exact URL    
     credentials: true, // 🔑 REQUIRED because your axios has 'withCredentials: true'
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
