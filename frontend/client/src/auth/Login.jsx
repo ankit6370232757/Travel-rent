@@ -44,24 +44,30 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async () => {
-    // Basic Validation
-    if(!identifier || !password) return toast.error("Please enter your Email/Phone and Password");
+// Inside your handleSubmit function
+const handleSubmit = async () => {
+    // 1. Trim the values to remove accidental spaces
+    const cleanIdentifier = identifier.trim();
+    const cleanPassword = password.trim();
+
+    // 2. Basic Validation (Use the cleaned values)
+    if(!cleanIdentifier || !cleanPassword) {
+        return toast.error("Please enter your Email/Phone and Password");
+    }
     
     setLoading(true);
     const loadingToast = toast.loading("Verifying credentials...");
 
     try {
-      // 🟢 Sends "identifier" to backend to check both email and phone_number columns
-      const res = await api.post("/auth/login", { identifier, password });
+      // 3. 🟢 Send cleaned data to backend
+      const res = await api.post("/auth/login", { 
+          identifier: cleanIdentifier, 
+          password: cleanPassword 
+      });
       
-      // 1. Save Login Data to Context & LocalStorage
       login(res.data);
-      
-      // 2. Success Message
       toast.success("Login Successful!", { id: loadingToast });
 
-      // 3. ✅ Role-Based Redirection
       if (res.data.user.role === "admin") {
         navigate("/admin");
       } else {
@@ -74,7 +80,7 @@ export default function Login() {
       toast.error(errorMessage, { id: loadingToast });
       setLoading(false);
     }
-  };
+};
 
   return (
     <Container>

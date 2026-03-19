@@ -2,17 +2,16 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, Tag, UserPlus, CheckCircle, Copy, X } from "lucide-react";
+import { User, Mail, Lock, Tag, UserPlus, CheckCircle, X } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
-import confetti from "canvas-confetti"; // 👈 npm install canvas-confetti
+import confetti from "canvas-confetti";
 
 // Phone Input
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
 // --- STYLED COMPONENTS ---
-
 const Container = styled.div`
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
@@ -82,7 +81,6 @@ const Footer = styled.div`
   a { color: #2ecc71; text-decoration: none; font-weight: 600; margin-left: 5px; } 
 `;
 
-// 🌸 SUCCESS MODAL STYLES
 const ModalOverlay = styled(motion.div)`
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
@@ -104,10 +102,9 @@ export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "", referralCode: "" });
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [successData, setSuccessData] = useState(null); // 🟢 Store 6-digit ID
+  const [successData, setSuccessData] = useState(null);
   const navigate = useNavigate();
 
-  // 🌸 Flower Blossom Celebration
   const triggerBlossom = () => {
     const end = Date.now() + 3 * 1000;
     const colors = ["#2ecc71", "#ffffff", "#27ae60"];
@@ -119,18 +116,34 @@ export default function Register() {
   };
 
   const submit = async () => {
-    if (!form.name || !form.email || !form.password || !phone) {
+    // 1. 🟢 CLEAN DATA: Trim everything and lowercase email
+    const cleanName = form.name.trim();
+    const cleanEmail = form.email.trim().toLowerCase();
+    const cleanPassword = form.password.trim();
+    const cleanPhone = phone.trim();
+    const cleanReferral = form.referralCode.trim();
+
+    // 2. Validation
+    if (!cleanName || !cleanEmail || !cleanPassword || !cleanPhone) {
       return toast.error("Please fill in all required fields");
     }
+
     setLoading(true);
     const loadingToast = toast.loading("Creating your account...");
 
     try {
-      const payload = { ...form, phoneNumber: phone };
-      const res = await api.post("/auth/register", payload); // 🟢 Backend now returns userId
+      const payload = { 
+        name: cleanName,
+        email: cleanEmail,
+        password: cleanPassword,
+        phoneNumber: cleanPhone,
+        referralCode: cleanReferral || null
+      };
+
+      const res = await api.post("/auth/register", payload);
       
       toast.success("Account Created Successfully!", { id: loadingToast });
-      setSuccessData(res.data.userId); // Save 6-digit ID to show in modal
+      setSuccessData(res.data.userId);
       triggerBlossom();
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Registration failed";
@@ -186,7 +199,6 @@ export default function Register() {
         <Footer>Already joined? <Link to="/login">Login Here</Link></Footer>
       </GlassCard>
 
-      {/* 🌸 SUCCESS MODAL FOR 6-DIGIT ID */}
       <AnimatePresence>
         {successData && (
           <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -194,9 +206,7 @@ export default function Register() {
               <CheckCircle size={60} color="#2ecc71" style={{ marginBottom: 20 }} />
               <h2 style={{ color: '#fff', margin: '0 0 10px 0' }}>Welcome Aboard!</h2>
               <p style={{ color: '#888', fontSize: '14px' }}>Please save your unique 6-digit User ID for login and security purposes.</p>
-              
               <IdDisplay>{successData}</IdDisplay>
-              
               <Button onClick={() => navigate("/login")} style={{ width: '100%' }}>
                 Continue to Login <X size={16} />
               </Button>

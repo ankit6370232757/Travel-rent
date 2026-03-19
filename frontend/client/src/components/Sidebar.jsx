@@ -16,7 +16,7 @@ const Container = styled(motion.div)`
   @media (max-width: 768px) { width: 100%; max-width: 300px; }
 `;
 
-const Header = styled.div` display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-left: 10px; flex-shrink: 0; `;
+const Header = styled.div` display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-left: 10px; flex-shrink: 0; `;
 const Logo = styled.h1` color: #fff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; margin: 0; span { color: #3ea6ff; } `;
 const CloseButton = styled.div` cursor: pointer; color: #888; display: none; @media (max-width: 768px) { display: block; } `;
 const Menu = styled.div` display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; padding-right: 5px; &::-webkit-scrollbar { width: 4px; } `;
@@ -44,8 +44,8 @@ const SubMenuItem = styled.div`
 
 const NotificationBadge = styled.span` background: #ff4757; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); `;
 const UserSection = styled.div` margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.05); `;
-const UserCard = styled.div` display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(255, 255, 255, 0.03); border-radius: 16px; `;
-const UserAvatar = styled.div` width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #3ea6ff, #8e2de2); display: flex; align-items: center; justify-content: center; color: white; `;
+const UserCard = styled.div` display: flex; align-items: center; gap: 9px; padding: 9px; background: rgba(255, 255, 255, 0.07); border-radius: 16px; `;
+const UserAvatar = styled.div` width: 35px; height: 35px; border-radius: 10px; background: linear-gradient(135deg, #3ea6ff, #8e2de2); display: flex; align-items: center; justify-content: center; color: white; `;
 const UserMeta = styled.div` display: flex; flex-direction: column; strong { font-size: 14px; color: #fff; } span { font-size: 11px; color: #666; } `;
 
 export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpen, onClose, pendingCount }) {
@@ -71,6 +71,16 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
             <Logo>Travel<span>Rent</span></Logo>
             <CloseButton onClick={onClose}><X size={24} /></CloseButton>
           </Header>
+
+          {!isAdmin && (  <UserCard>
+              <UserAvatar>{user?.name?.charAt(0).toUpperCase() || "U"}</UserAvatar>
+              <UserMeta>
+                <strong>{user?.name || "User"}</strong>
+                <span>{user?.id}</span>
+                {isAdmin && <span style={{color: '#ff6b6b', fontSize: '9px', fontWeight: 'bold', marginTop: '2px'}}>ADMIN ACCESS</span>}
+              </UserMeta>
+            </UserCard>
+          )}
 
           <Menu>
             {isAdmin ? (
@@ -207,14 +217,17 @@ export default function Sidebar({ activeTab, setActiveTab, onLogout, user, isOpe
             <MenuItem onClick={onLogout} style={{ color: '#ff6b6b', marginBottom: '10px' }}>
               <LogOut size={20} /> Logout
             </MenuItem>
-            <UserCard>
+
+       {isAdmin && (  <UserCard>
               <UserAvatar>{user?.name?.charAt(0).toUpperCase() || "U"}</UserAvatar>
               <UserMeta>
                 <strong>{user?.name || "User"}</strong>
-                <span>{user?.email}</span>
+                <span>{isAdmin ? (<span>{user?.email}</span>):(<span>{user?.email}</span>)}</span>
                 {isAdmin && <span style={{color: '#ff6b6b', fontSize: '9px', fontWeight: 'bold', marginTop: '2px'}}>ADMIN ACCESS</span>}
               </UserMeta>
-            </UserCard>
+            </UserCard> 
+       )}
+
           </UserSection>
         </Container>
       )}
