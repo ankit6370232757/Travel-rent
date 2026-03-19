@@ -15,7 +15,6 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
 // --- STYLED COMPONENTS ---
-
 const Container = styled.div`
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
@@ -233,9 +232,7 @@ export default function Register() {
               <CheckCircle size={60} color="#2ecc71" style={{ marginBottom: 20 }} />
               <h2 style={{ color: '#fff', margin: '0 0 10px 0' }}>Welcome Aboard!</h2>
               <p style={{ color: '#888', fontSize: '14px' }}>Please save your unique 6-digit User ID for login and security purposes.</p>
-              
               <IdDisplay>{successData}</IdDisplay>
-              
               <Button onClick={() => navigate("/login")} style={{ width: '100%' }}>
                 Continue to Login <ArrowRight size={18} />
               </Button>

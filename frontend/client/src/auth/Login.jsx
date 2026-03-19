@@ -90,7 +90,7 @@ export default function Login() {
       toast.error(errorMessage, { id: loadingToast });
       setLoading(false);
     }
-  };
+};
 
   return (
     <Container>
