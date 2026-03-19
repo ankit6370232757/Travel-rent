@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom"; // Added useSearchParams
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, Tag, UserPlus, CheckCircle, X } from "lucide-react";
+import { 
+  User, Mail, Lock, Tag, UserPlus, CheckCircle, 
+  Eye, EyeOff, ArrowRight 
+} from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
@@ -33,7 +36,7 @@ const GlassCard = styled(motion.div)`
 `;
 
 const Header = styled.div` text-align: center; margin-bottom: 5px; `;
-const Logo = styled.h1` font-size: 32px; font-weight: 800; margin: 0 0 5px 0; color: #fff; letter-spacing: -1px; span { color: #2ecc71; } `;
+const Logo = styled.h1` font-size: 32px; font-weight: 800; margin: 0 0 10px 0; color: #fff; letter-spacing: -1px; span { color: #2ecc71; } `;
 const Subtitle = styled.p` color: #888; font-size: 14px; margin: 0; `;
 
 const InputGroup = styled.div` position: relative; width: 100%; `;
@@ -42,10 +45,17 @@ const IconWrapper = styled.div`
   color: #666; display: flex; align-items: center; pointer-events: none; z-index: 10;
 `;
 
+const EyeWrapper = styled.div`
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  color: #666; display: flex; align-items: center; cursor: pointer;
+  z-index: 11; transition: color 0.2s;
+  &:hover { color: #2ecc71; }
+`;
+
 const Input = styled.input`
   width: 100%; background-color: rgba(0, 0, 0, 0.3); 
   border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; 
-  padding: 14px 14px 14px 50px; color: #fff; font-size: 15px; outline: none; 
+  padding: 14px 45px 14px 50px; color: #fff; font-size: 15px; outline: none; 
   transition: all 0.2s; box-sizing: border-box;
   &::placeholder { color: #555; }
   &:focus { border-color: #2ecc71; background-color: rgba(0, 0, 0, 0.5); }
@@ -99,11 +109,28 @@ const IdDisplay = styled.div`
 `;
 
 export default function Register() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", referralCode: "" });
+  const [searchParams] = useSearchParams();
+  const refCodeFromUrl = searchParams.get("ref") || ""; // Extracted from URL
+
+  const [form, setForm] = useState({ 
+    name: "", 
+    email: "", 
+    password: "", 
+    referralCode: refCodeFromUrl // Auto-fills if available
+  });
+  
   const [phone, setPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const navigate = useNavigate();
+
+  // Ensure the state updates if the URL changes while on the page
+  useEffect(() => {
+    if (refCodeFromUrl) {
+      setForm((prev) => ({ ...prev, referralCode: refCodeFromUrl }));
+    }
+  }, [refCodeFromUrl]);
 
   const triggerBlossom = () => {
     const end = Date.now() + 3 * 1000;
@@ -116,34 +143,19 @@ export default function Register() {
   };
 
   const submit = async () => {
-    // 1. 🟢 CLEAN DATA: Trim everything and lowercase email
-    const cleanName = form.name.trim();
-    const cleanEmail = form.email.trim().toLowerCase();
-    const cleanPassword = form.password.trim();
-    const cleanPhone = phone.trim();
-    const cleanReferral = form.referralCode.trim();
-
-    // 2. Validation
-    if (!cleanName || !cleanEmail || !cleanPassword || !cleanPhone) {
-      return toast.error("Please fill in all required fields");
+    if (!form.name || !form.email || !form.password || !phone || !form.referralCode) {
+      return toast.error("Please fill in all required fields (including Referral Code)");
     }
-
+    
     setLoading(true);
     const loadingToast = toast.loading("Creating your account...");
 
     try {
-      const payload = { 
-        name: cleanName,
-        email: cleanEmail,
-        password: cleanPassword,
-        phoneNumber: cleanPhone,
-        referralCode: cleanReferral || null
-      };
-
+      const payload = { ...form, phoneNumber: phone };
       const res = await api.post("/auth/register", payload);
       
       toast.success("Account Created Successfully!", { id: loadingToast });
-      setSuccessData(res.data.userId);
+      setSuccessData(res.data.userId); 
       triggerBlossom();
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Registration failed";
@@ -182,12 +194,25 @@ export default function Register() {
         </InputGroup>
 
         <InputGroup>
-          <Input type="password" placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          <Input 
+            type={showPassword ? "text" : "password"} 
+            placeholder="Password" 
+            value={form.password} 
+            onChange={e => setForm({ ...form, password: e.target.value })} 
+          />
           <IconWrapper><Lock size={18} /></IconWrapper>
+          <EyeWrapper onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </EyeWrapper>
         </InputGroup>
 
         <InputGroup>
-          <Input placeholder="Referral Code (Optional)" value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value })} />
+          <Input 
+            placeholder="Referral Code" 
+            value={form.referralCode} 
+            onChange={e => setForm({ ...form, referralCode: e.target.value })} 
+            readOnly={!!refCodeFromUrl} // Disables typing if fetched from URL to prevent accidental overrides (Optional: remove this if you want them to be able to edit it)
+          />
           <IconWrapper><Tag size={18} /></IconWrapper>
         </InputGroup>
         
@@ -199,6 +224,7 @@ export default function Register() {
         <Footer>Already joined? <Link to="/login">Login Here</Link></Footer>
       </GlassCard>
 
+      {/* SUCCESS MODAL */}
       <AnimatePresence>
         {successData && (
           <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -208,7 +234,7 @@ export default function Register() {
               <p style={{ color: '#888', fontSize: '14px' }}>Please save your unique 6-digit User ID for login and security purposes.</p>
               <IdDisplay>{successData}</IdDisplay>
               <Button onClick={() => navigate("/login")} style={{ width: '100%' }}>
-                Continue to Login <X size={16} />
+                Continue to Login <ArrowRight size={18} />
               </Button>
             </ModalContent>
           </ModalOverlay>

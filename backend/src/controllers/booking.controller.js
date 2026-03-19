@@ -140,3 +140,28 @@ exports.getAllBookings = async(req, res) => {
         res.status(500).json({ message: "Failed to fetch bookings" });
     }
 };
+exports.getUserActivePackages = async(req, res) => {
+    try {
+        const userId = req.user.id;
+        const query = `
+            SELECT 
+                s.id as seat_id,
+                p.name as package_name,
+                p.ticket_price,
+                s.seat_number,
+                s.batch_number,
+                s.booked_at,
+                s.income_type,
+                s.daily_income,
+                s.days_remaining
+            FROM seats s
+            JOIN packages p ON s.package_id = p.id
+            WHERE s.user_id = $1 AND s.status = 'OCCUPIED'
+            ORDER BY s.booked_at DESC
+        `;
+        const result = await pool.query(query, [userId]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching active assets" });
+    }
+};

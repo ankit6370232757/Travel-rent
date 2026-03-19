@@ -2,12 +2,12 @@ import React, { useState, useContext } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Lock, ArrowRight } from "lucide-react"; // Switched Mail to User icon for flexibility
+import { User, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"; 
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 import toast from "react-hot-toast"; 
 
-// --- STYLED COMPONENTS (No Changes for UI Consistency) ---
+// --- STYLED COMPONENTS ---
 const Container = styled.div`
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
@@ -33,38 +33,48 @@ const Logo = styled.h1` font-size: 32px; font-weight: 800; margin: 0 0 10px 0; c
 const Subtitle = styled.p` color: #888; font-size: 15px; margin: 0; `;
 const InputGroup = styled.div` position: relative; `;
 const IconWrapper = styled.div` position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #666; display: flex; align-items: center; transition: color 0.2s; `;
-const Input = styled.input` width: 100%; background-color: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px 16px 16px 50px; color: #fff; font-size: 15px; outline: none; transition: all 0.2s; box-sizing: border-box; &::placeholder { color: #555; } &:focus { border-color: #3ea6ff; background-color: rgba(0, 0, 0, 0.5); box-shadow: 0 0 0 4px rgba(62, 166, 255, 0.1); } &:focus + ${IconWrapper} { color: #3ea6ff; } `;
-const Button = styled(motion.button)` background: linear-gradient(135deg, #3ea6ff 0%, #2563eb 100%); color: #fff; border: none; border-radius: 12px; padding: 16px; font-weight: 700; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; box-shadow: 0 4px 15px rgba(62, 166, 255, 0.3); transition: box-shadow 0.2s; &:hover { box-shadow: 0 6px 20px rgba(62, 166, 255, 0.4); } `;
+
+const EyeWrapper = styled.div` 
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%); 
+  color: #666; display: flex; align-items: center; cursor: pointer; 
+  transition: color 0.2s; &:hover { color: #3ea6ff; } 
+`;
+
+const Input = styled.input` 
+  width: 100%; background-color: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); 
+  border-radius: 12px; padding: 16px 45px 16px 50px; color: #fff; font-size: 15px; 
+  outline: none; transition: all 0.2s; box-sizing: border-box; 
+  &::placeholder { color: #555; } 
+  &:focus { border-color: #3ea6ff; background-color: rgba(0, 0, 0, 0.5); box-shadow: 0 0 0 4px rgba(62, 166, 255, 0.1); } 
+  &:focus + ${IconWrapper} { color: #3ea6ff; } 
+`;
+
+const Button = styled(motion.button)` 
+  background: linear-gradient(135deg, #3ea6ff 0%, #2563eb 100%); color: #fff; 
+  border: none; border-radius: 12px; padding: 16px; font-weight: 700; font-size: 16px; 
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; 
+  margin-top: 10px; box-shadow: 0 4px 15px rgba(62, 166, 255, 0.3); transition: box-shadow 0.2s; 
+  &:hover { box-shadow: 0 6px 20px rgba(62, 166, 255, 0.4); } 
+`;
+
 const Footer = styled.div` text-align: center; font-size: 14px; color: #666; margin-top: 10px; a { color: #3ea6ff; text-decoration: none; font-weight: 600; margin-left: 5px; &:hover { text-decoration: underline; } } `;
 
 export default function Login() {
   const { login } = useContext(AuthContext);
-  const [identifier, setIdentifier] = useState(""); // 🟢 Supports Email or Phone
+  const [identifier, setIdentifier] = useState(""); 
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // Toggle visibility state
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-// Inside your handleSubmit function
-const handleSubmit = async () => {
-    // 1. Trim the values to remove accidental spaces
-    const cleanIdentifier = identifier.trim();
-    const cleanPassword = password.trim();
-
-    // 2. Basic Validation (Use the cleaned values)
-    if(!cleanIdentifier || !cleanPassword) {
-        return toast.error("Please enter your Email/Phone and Password");
-    }
+  const handleSubmit = async () => {
+    if(!identifier || !password) return toast.error("Please enter your Email/Phone and Password");
     
     setLoading(true);
     const loadingToast = toast.loading("Verifying credentials...");
 
     try {
-      // 3. 🟢 Send cleaned data to backend
-      const res = await api.post("/auth/login", { 
-          identifier: cleanIdentifier, 
-          password: cleanPassword 
-      });
-      
+      const res = await api.post("/auth/login", { identifier, password });
       login(res.data);
       toast.success("Login Successful!", { id: loadingToast });
 
@@ -92,12 +102,12 @@ const handleSubmit = async () => {
       >
         <Header>
           <Logo>Travel<span>Rent</span></Logo>
-          <Subtitle>Access your account via Email or Mobile Number</Subtitle>
+          <Subtitle>Access your account via Email</Subtitle>
         </Header>
 
         <InputGroup>
           <Input 
-            placeholder="Email or Mobile Number" 
+            placeholder="Email" 
             type="text" 
             value={identifier} 
             onChange={(e) => setIdentifier(e.target.value)} 
@@ -108,13 +118,16 @@ const handleSubmit = async () => {
 
         <InputGroup>
           <Input 
-            type="password" 
+            type={showPassword ? "text" : "password"} 
             placeholder="Password" 
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()} 
           />
           <IconWrapper><Lock size={18} /></IconWrapper>
+          <EyeWrapper onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </EyeWrapper>
         </InputGroup>
         
         <Button 
