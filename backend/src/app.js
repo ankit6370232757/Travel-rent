@@ -18,10 +18,11 @@ const publicRoutes = require("./routes/public.routes");
 const app = express(); // ✅ app must be created FIRST
 
 app.use(cors({
-    origin: true, // 🚀 Allows your Vercel frontend to connect dynamically
+    origin: ["https://travel-rent-client.vercel.app"], // Specify your exact URL    
     credentials: true, // 🔑 REQUIRED because your axios has 'withCredentials: true'
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204 // 🟢 Crucial for older mobile browsers
 }));
 app.use(express.json());
 
