@@ -4,7 +4,7 @@ import axios from "axios";
 // 1. Checks if a VITE_API_URL is set (like in Vercel or your .env file).
 // 2. If not found, it falls back to localhost (for safety).
 const BASE_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    import.meta.env.VITE_API_URL || "http://156.67.219.15:5000/api";
 
 const api = axios.create({
     baseURL: BASE_URL,
